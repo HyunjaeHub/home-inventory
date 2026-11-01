@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Badge } from '@/components/badge';
 import { Icon } from '@/components/icon';
 import { InfoList, InfoRow } from '@/components/info-list';
+import { usePlaceLook } from '@/components/place-look';
 import { Screen } from '@/components/screen';
 import { addDays, consBadge, consDays, monthDay, type ConsumableItem } from '@/domain';
 import { useHome } from '@/stores/home-store';
@@ -11,6 +12,7 @@ import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 export function ConsDetail({ item }: { item: ConsumableItem }) {
   const today = useHome((s) => s.today);
   const actions = useHome.getState();
+  const look = usePlaceLook();
   const days = consDays(item);
   const b = consBadge(item, today);
   const empty = item.qty <= 0;
@@ -35,7 +37,7 @@ export function ConsDetail({ item }: { item: ConsumableItem }) {
             {item.qty}
             {item.unit}
           </Text>
-          <Text style={styles.qtySub}>남음 · {item.place} · 소모품</Text>
+          <Text style={styles.qtySub}>남음 · {look(item.place).name} · 소모품</Text>
         </View>
         <View style={styles.badgeRow}>
           <Badge text={!empty && days <= 14 ? `${b.text} 사기` : b.text} tone={b.tone} />
@@ -80,7 +82,7 @@ export function ConsDetail({ item }: { item: ConsumableItem }) {
       <InfoList title="설정">
         <InfoRow label="1개로 쓰는 기간" value={`자동 (${item.every}일)`} />
         <InfoRow label="장보기 자동 추천" value="떨어지기 3일 전" />
-        <InfoRow label="보관 장소" value={item.place} />
+        <InfoRow label="보관 장소" value={look(item.place).name} />
       </InfoList>
     </Screen>
   );

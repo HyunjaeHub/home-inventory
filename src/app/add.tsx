@@ -13,15 +13,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Icon, placeIcon } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { Sheet } from '@/components/sheet';
 import {
   daysBetween,
   dBadge,
   expTone,
   fmt,
+  isColdKind,
   monthDay,
-  PLACES,
   todayIso,
   type IsoDate,
 } from '@/domain';
@@ -31,6 +32,7 @@ import {
   canSubmit,
   EXP_CHOICES,
   formExp,
+  fridgeCount,
   packPlaces,
   qtyStep,
   quickAmounts,
@@ -45,7 +47,7 @@ import {
   type AddForm,
 } from '@/features/add/add-form';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, fonts, placeColors, radius, spacing, tones } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing, tones } from '@/theme';
 
 const KINDS = [
   { kind: 'food', label: '식품', sub: '기한으로 관리', fg: '#2E6B4F', bg: '#DDF2E6' },
@@ -70,10 +72,12 @@ export default function AddScreen() {
   const items = useHome((s) => s.items);
   const today = useHome((s) => s.today);
   const addStock = useHome((s) => s.addStock);
+  const places = useHome((s) => s.places);
+  const look = usePlaceLook();
   const entry = useHome((s) => (inboxId ? s.inbox.find((x) => x.id === inboxId) : undefined));
   const [form, setForm] = useState<AddForm>(() => {
-    if (entry) return fromInbox(items, entry);
-    return name ? withName(blankForm(), items, name) : blankForm();
+    if (entry) return fromInbox(items, entry, places);
+    return name ? withName(blankForm(places), items, name, places) : blankForm(places);
   });
   const [unitOpen, setUnitOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -84,10 +88,11 @@ export default function AddScreen() {
   const expDays = exp ? daysBetween(today, exp) : null;
   const ok = canSubmit(form);
   const step = qtyStep(form);
-  const fridgeCount = form.place === '냉동' ? form.fridgePacks.length : 0;
+  const formLook = look(form.place);
+  const packsInFridge = fridgeCount(form, places);
 
   const submit = () => {
-    const id = addStock(toAddInput(form, today), entry?.id);
+    const id = addStock(toAddInput(form, today, places), entry?.id);
     if (!id) return;
     // 장보기에서 왔으면 남은 정리할 것을 이어서 하도록 장보기로 돌아간다
     if (entry) router.back();
@@ -124,7 +129,7 @@ export default function AddScreen() {
           <Field label="이름">
             <TextInput
               value={form.name}
-              onChangeText={(v) => setForm((f) => withName(f, items, v))}
+              onChangeText={(v) => setForm((f) => withName(f, items, v, places))}
               placeholder="예: 요거트"
               placeholderTextColor={colors.textMuted}
               accessibilityLabel="이름"
@@ -143,7 +148,7 @@ export default function AddScreen() {
                     key={k.kind}
                     accessibilityRole="radio"
                     accessibilityState={{ selected: on }}
-                    onPress={() => setForm((f) => withKind(f, k.kind))}
+                    onPress={() => setForm((f) => withKind(f, k.kind, places))}
                     style={[styles.kind, on && { backgroundColor: k.bg, borderColor: k.fg }]}>
                     <Icon
                       name={k.kind === 'food' ? 'bowl' : 'home'}
@@ -164,15 +169,17 @@ export default function AddScreen() {
           </Field>
 
           <Field label="보관 장소">
-            <View style={styles.row6}>
-              {PLACES.map((p) => {
+            <View style={styles.placeGrid}>
+              {places.map(({ id: p }) => {
                 const on = form.place === p;
-                const off = !isFood && p !== '생활';
-                const pc = placeColors[p];
+                const pc = look(p);
+                // 소모품은 생활용품 종류에만, 식품은 생활용품 종류가 아닌 곳에만
+                const off = isFood ? pc.kind === 'home' : pc.kind !== 'home';
                 return (
                   <Pressable
                     key={p}
                     accessibilityRole="radio"
+                    accessibilityLabel={pc.name}
                     accessibilityState={{ selected: on, disabled: off }}
                     disabled={off}
                     onPress={() => setForm((f) => ({ ...f, place: p, fridgePacks: [] }))}
@@ -181,8 +188,10 @@ export default function AddScreen() {
                       on && { backgroundColor: pc.tint, borderColor: pc.fg },
                       off && { opacity: 0.35 },
                     ]}>
-                    <Icon name={placeIcon(p)} color={pc.fg} />
-                    <Text style={[styles.placeLabel, { color: pc.fg }]}>{p}</Text>
+                    <Icon name={pc.icon} color={pc.fg} />
+                    <Text style={[styles.placeLabel, { color: pc.fg }]} numberOfLines={1}>
+                      {pc.name}
+                    </Text>
                   </Pressable>
                 );
               })}
@@ -317,31 +326,33 @@ export default function AddScreen() {
                       </View>
                     </View>
                     <View style={styles.packs}>
-                      {packPlaces(form).map((p, k) => {
-                        const pc = placeColors[p];
-                        const tappable = form.place === '냉장' || form.place === '냉동';
+                      {packPlaces(form, places).map((p, k) => {
+                        const pc = look(p);
+                        const tappable = isColdKind(formLook.kind);
                         return (
                           <Pressable
                             key={k}
                             accessibilityRole="button"
-                            accessibilityLabel={`${k + 1}번째 팩 ${p}${tappable ? (p === '냉장' ? ' · 눌러서 냉동으로' : ' · 눌러서 냉장으로') : ''}`}
+                            accessibilityLabel={`${k + 1}번째 팩 ${pc.name}${tappable ? (pc.kind === 'fridge' ? ' · 눌러서 냉동으로' : ' · 눌러서 냉장으로') : ''}`}
                             disabled={!tappable}
-                            onPress={() => setForm((f) => togglePack(f, k))}
+                            onPress={() => setForm((f) => togglePack(f, k, places))}
                             style={[styles.pack, { backgroundColor: pc.tint, borderColor: pc.fg }]}>
-                            <Icon name={placeIcon(p)} color={pc.fg} size={18} />
+                            <Icon name={pc.icon} color={pc.fg} size={18} />
                             <Text style={[styles.packSize, { color: pc.fg }]}>
                               {fmt(form.qty / form.portions)}
                               {form.unit}
                             </Text>
-                            <Text style={[styles.packPlace, { color: pc.fg }]}>{p}</Text>
+                            <Text style={[styles.packPlace, { color: pc.fg }]} numberOfLines={1}>
+                              {pc.name}
+                            </Text>
                           </Pressable>
                         );
                       })}
                     </View>
                     <Text style={styles.note}>
-                      {form.place === '냉동' || form.place === '냉장'
-                        ? `팩을 누르면 냉장 ↔ 냉동이 바뀌어요 · 냉장 ${form.place === '냉장' ? form.portions : fridgeCount}팩, 냉동 ${form.place === '냉장' ? 0 : form.portions - fridgeCount}팩`
-                        : `모두 ${form.place}에 넣어요`}
+                      {isColdKind(formLook.kind)
+                        ? `팩을 누르면 냉장 ↔ 냉동이 바뀌어요 · 냉장 ${formLook.kind === 'fridge' ? form.portions : packsInFridge}팩, 냉동 ${formLook.kind === 'fridge' ? 0 : form.portions - packsInFridge}팩`
+                        : `모두 ${formLook.name}에 넣어요`}
                     </Text>
                   </View>
                 )}
@@ -388,7 +399,7 @@ export default function AddScreen() {
                 <Text style={styles.note}>
                   {!exp
                     ? '기한 없이 개수로 관리해요 · 2주 넘게 두면 홈에서 알려 줘요'
-                    : `${form.split && fridgeCount > 0 ? '냉장에 둔 팩은 2일 안에 먹기로 잡아요 · ' : ''}날짜 줄을 누르면 달력에서 고를 수 있어요`}
+                    : `${form.split && packsInFridge > 0 ? '냉장에 둔 팩은 2일 안에 먹기로 잡아요 · ' : ''}날짜 줄을 누르면 달력에서 고를 수 있어요`}
                 </Text>
               </Field>
             </>
@@ -538,8 +549,12 @@ const styles = StyleSheet.create({
   },
   kindLabel: { fontSize: fontSize.bodyLarge, fontWeight: '700' },
   kindSub: { fontSize: fontSize.caption, opacity: 0.85 },
+  // 한 줄에 4칸, 장소가 더 많으면 다음 줄로
+  placeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   place: {
-    flex: 1,
+    width: '23%',
+    flexGrow: 1,
+    paddingHorizontal: spacing.xs,
     height: 66,
     borderRadius: radius.lg,
     borderWidth: 2,

@@ -8,7 +8,11 @@ import {
   changeMeal,
   completeMeal,
   completeShop,
+  DEFAULT_PLACES,
   DEFAULT_RULES,
+  nameProblem,
+  placeInUse,
+  removeBlocker,
   eat,
   moveLot,
   removeMeal,
@@ -30,7 +34,9 @@ import {
   type Item,
   type MealEntry,
   type Place,
+  type PlaceKind,
   type Rules,
+  type StoragePlace,
   type ShopItem,
   type Task,
 } from '@/domain';
@@ -51,10 +57,19 @@ type HomeState = {
   tasks: Task[];
   /** 계산에 쓰는 우리 집 규칙 (설정 화면) */
   rules: Rules;
+  /** 보관 장소 (순서대로 화면에 보임) */
+  places: StoragePlace[];
   /** 계산 밖의 설정 값 (알림은 Phase 7에서 실제로 보냄) */
   prefs: Prefs;
 
   setRules: (patch: Partial<Rules>) => void;
+  /** 보관 장소 추가. 이름이 비었거나 겹치면 토스트로 알리고 false */
+  addPlace: (name: string, kind: PlaceKind) => boolean;
+  /** 이름·종류 바꾸기. 안 되면 토스트로 알리고 false */
+  updatePlace: (id: string, patch: { name?: string; kind?: PlaceKind }) => boolean;
+  movePlace: (id: string, dir: -1 | 1) => void;
+  /** 지우기. 쓰는 중이거나 그 종류의 마지막 장소면 토스트로 알리고 false */
+  removePlace: (id: string) => boolean;
   setPrefs: (patch: Partial<Prefs>) => void;
   /** 모든 재고·장보기·한끼를 지운다 (할 일과 설정은 남김) */
   clearAll: () => void;
@@ -129,7 +144,13 @@ const inboxLeftText = (inbox: InboxItem[]) =>
   inbox.length ? ` · 정리할 것 ${inbox.length}개 남음` : ' · 정리 끝';
 
 export const useHome = create<HomeState>((set, get) => {
-  const ctx = (): Ctx => ({ today: get().today, by: get().me, newId, rules: get().rules });
+  const ctx = (): Ctx => ({
+    today: get().today,
+    by: get().me,
+    newId,
+    rules: get().rules,
+    places: get().places,
+  });
 
   /** 도메인 결과를 반영하고 토스트를 띄운다 */
   function apply<T>(change: Change<T>, update: (next: T) => Partial<HomeState>) {
@@ -144,9 +165,64 @@ export const useHome = create<HomeState>((set, get) => {
     meal: [],
     ...seedData(),
     rules: DEFAULT_RULES,
+    places: DEFAULT_PLACES,
     prefs: DEFAULT_PREFS,
 
     setRules: (patch) => set({ rules: { ...get().rules, ...patch } }),
+    addPlace: (name, kind) => {
+      const problem = nameProblem(get().places, name);
+      if (problem) {
+        showToast(problem);
+        return false;
+      }
+      set({ places: [...get().places, { id: newId(), name: name.trim(), kind }] });
+      showToast(`${name.trim()}을(를) 추가했어요`);
+      return true;
+    },
+    updatePlace: (id, patch) => {
+      const { places } = get();
+      const cur = places.find((p) => p.id === id);
+      if (!cur) return false;
+      if (patch.name !== undefined) {
+        const problem = nameProblem(places, patch.name, id);
+        if (problem) {
+          showToast(problem);
+          return false;
+        }
+      }
+      // 종류를 바꾸면 원래 종류가 하나도 안 남는지 확인
+      if (patch.kind && patch.kind !== cur.kind) {
+        const blocker = removeBlocker(places, id, false);
+        if (blocker) {
+          showToast(blocker);
+          return false;
+        }
+      }
+      set({
+        places: places.map((p) =>
+          p.id === id ? { ...p, ...patch, name: (patch.name ?? p.name).trim() } : p
+        ),
+      });
+      return true;
+    },
+    movePlace: (id, dir) => {
+      const places = [...get().places];
+      const i = places.findIndex((p) => p.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= places.length) return;
+      [places[i], places[j]] = [places[j], places[i]];
+      set({ places });
+    },
+    removePlace: (id) => {
+      const { places, items, shop, inbox } = get();
+      const blocker = removeBlocker(places, id, placeInUse(id, items, shop, inbox));
+      if (blocker) {
+        showToast(blocker);
+        return false;
+      }
+      set({ places: places.filter((p) => p.id !== id) });
+      return true;
+    },
     setPrefs: (patch) => set({ prefs: { ...get().prefs, ...patch } }),
     clearAll: () => {
       set({ items: [], shop: [], inbox: [], meal: [] });

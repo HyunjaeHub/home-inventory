@@ -1,9 +1,10 @@
+import type { StoragePlace } from './places';
+
 /** 날짜는 모두 기기 로컬 기준 'YYYY-MM-DD' 문자열로 다룬다 (타임존 버그 방지). */
 export type IsoDate = string;
 
-export type Place = '냉장' | '냉동' | '실온' | '생활';
-
-export const PLACES: readonly Place[] = ['냉장', '냉동', '실온', '생활'];
+/** 보관 장소 id (places.ts의 StoragePlace.id). 기본 4곳은 '냉장'·'냉동'·'실온'·'생활' */
+export type Place = string;
 
 /** 같은 품목이라도 산 날·기한·보관 장소가 다르면 별도 로트로 관리한다 */
 export type Lot = {
@@ -116,6 +117,8 @@ export type Ctx = {
   by: string;
   newId: () => string;
   rules?: Rules;
+  /** 보관 장소 목록. 없으면 기본 4곳 */
+  places?: StoragePlace[];
 };
 
 /** 변경 연산의 결과: 바뀐 데이터와 토스트 문구. 할 일이 없으면 null */

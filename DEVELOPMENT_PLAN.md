@@ -132,6 +132,16 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
 7. [x] **다음 한끼** — 담은 재료(먹음 체크·양 조절·빼기), 먼저 먹으면 좋아요 추천, 재료 고르기(장소별·검색), 해치우기 완료로 재고 차감, 탭 배지(한끼 수·살 것 수)
 8. [x] **설정** — 시안 **A(기본형)**. 우리 집 규칙(기한 임박 기준·냉장 소분 팩·냉동 연장)이 계산에 바로 반영, 알림 값 저장(실제 알림은 Phase 7), 장보기 자동 추천·정리함 사용, 기록 보관 기간, 모든 재고 지우기, 샘플 데이터로 되돌리기(개발용)
    - 서버가 필요한 항목(함께 쓰는 사람·초대 링크·백업·기억한 단위 목록)은 자리만 있고 Phase 4 이후에 연결
+9. [x] **보관 장소 관리** (시안에 없던 추가 기능) — 설정 › 보관 장소
+   - 장소를 **데이터**로 바꿈: `StoragePlace { id, name, kind }` (`src/domain/places.ts`)
+   - **종류(kind)** 4가지: 냉장(`fridge`)·냉동(`freezer`)·실온(`pantry`)·생활용품(`home`). 기한 규칙은 장소 이름이 아니라 종류로 판단
+     - 예: '김치냉장고'를 냉장 종류로 만들면 냉장 규칙, '딥프리저'를 냉동 종류로 만들면 냉동 규칙(해동 시 첫 냉장 장소로)
+     - 색·아이콘도 종류에서 정해짐 (`src/components/place-look.ts`)
+   - 기본 4곳의 id는 예전 이름과 같게(`'냉장'` 등) 두어 기존 데이터·테스트가 그대로 동작
+   - 화면에서 할 수 있는 것: 추가(이름·종류), 이름·종류 고치기, 위/아래로 순서 바꾸기, 지우기
+   - 지울 수 없는 경우: 재고·살 것·정리할 것이 있는 장소, 그 종류의 마지막 한 곳 (해동·소모품 넣기 규칙이 갈 곳이 없어지므로)
+   - 장소 순서가 재고 목록 묶음·필터 탭, 빠른 추가, 재료 고르기 순서가 됨. 장소가 많으면 재고 필터는 가로 스크롤, 빠른 추가는 여러 줄
+   - 이름을 바꾸면 모든 화면·토스트에 새 이름으로 보임 (재고는 id를 가리키므로 데이터는 그대로)
 
 - [x] 공통: 토스트, 바텀시트(양 고치기·나누기), 수량 조절, 배지, 아이콘, 빈 상태
 - [ ] 공통: 로딩/에러 상태 (서버 연동 때)
@@ -142,18 +152,21 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
 
 - [ ] Supabase 프로젝트 생성, 환경변수는 `EXPO_PUBLIC_SUPABASE_URL` / `..._ANON_KEY` (`.env`는 git 제외)
 - [ ] 테이블 설계 (초안)
-  | 테이블               | 주요 컬럼                                                                  |
-  | -------------------- | -------------------------------------------------------------------------- |
-  | `households`         | id, name                                                                   |
-  | `household_members`  | household_id, user_id, display_name(나/남편)                               |
-  | `items`              | id, household_id, name, kind, place, unit, no_exp, every_days, qty(소모품) |
-  | `lots`               | id, item_id, place, qty, unit, size, exp, bought_on, bought_by             |
-  | `item_logs`          | id, item_id, text, actor, created_at                                       |
-  | `shop_items`         | id, household_id, name, place, added_by, checked                           |
-  | `inbox_items`        | id, household_id, name, place, added_by, day                               |
-  | `meal_entries`       | id, household_id, item_id, lot_id, qty, checked                            |
-  | `tasks`              | id, household_id, text, done                                               |
-  | `household_settings` | household_id, jsonb(규칙 값)                                               |
+  | 테이블               | 주요 컬럼                                                                     |
+  | -------------------- | ----------------------------------------------------------------------------- |
+  | `households`         | id, name                                                                      |
+  | `household_members`  | household_id, user_id, display_name(나/남편)                                  |
+  | `places`             | id, household_id, name, kind(fridge/freezer/pantry/home), sort_order          |
+  | `items`              | id, household_id, name, kind, place_id, unit, no_exp, every_days, qty(소모품) |
+  | `lots`               | id, item_id, place_id, qty, unit, size, exp, bought_on, bought_by             |
+  | `item_logs`          | id, item_id, text, actor, created_at                                          |
+  | `shop_items`         | id, household_id, name, place, added_by, checked                              |
+  | `inbox_items`        | id, household_id, name, place, added_by, day                                  |
+  | `meal_entries`       | id, household_id, item_id, lot_id, qty, checked                               |
+  | `tasks`              | id, household_id, text, done                                                  |
+  | `household_settings` | household_id, jsonb(규칙 값)                                                  |
+  - `places`: 가구를 만들 때 기본 4곳(냉장·냉동·실온·생활)을 넣는다. `shop_items`·`inbox_items`의 place도 `place_id`로
+  - 장소 지우기 제한(쓰는 중·종류의 마지막 한 곳)은 앱 검사와 함께 DB 함수에서도 확인
 - [ ] **RLS 필수**: 모든 테이블 `household_id`가 내가 속한 가구일 때만 read/write
 - [ ] 인증: 이메일 매직링크 또는 이메일+비밀번호 → 세션은 `expo-secure-store`에 저장
 - [ ] 가구 생성 + **초대 링크/코드로 배우자 합류** (설정 화면의 "초대 링크로 남편 폰 연결")

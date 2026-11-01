@@ -3,10 +3,11 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Badge } from '@/components/badge';
-import { Icon, placeIcon } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { pickerGroups } from '@/features/meal/meal-view';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, fonts, placeColors, radius, spacing } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 /** 재료 고르기: 장소별 식품을 눌러 다음 한끼에 담고 뺀다 */
 export function MealPicker({ visible, onClose }: { visible: boolean; onClose: () => void }) {
@@ -14,8 +15,10 @@ export function MealPicker({ visible, onClose }: { visible: boolean; onClose: ()
   const meal = useHome((s) => s.meal);
   const today = useHome((s) => s.today);
   const actions = useHome.getState();
+  const places = useHome((s) => s.places);
+  const look = usePlaceLook();
   const [query, setQuery] = useState('');
-  const groups = pickerGroups(items, meal, today, query);
+  const groups = pickerGroups(items, meal, today, query, places);
 
   return (
     <Modal
@@ -45,12 +48,12 @@ export function MealPicker({ visible, onClose }: { visible: boolean; onClose: ()
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {groups.map((g) => {
-            const pc = placeColors[g.place];
+            const pc = look(g.place);
             return (
               <View key={g.place} style={[styles.group, { backgroundColor: pc.tint }]}>
                 <View style={styles.groupHead}>
-                  <Icon name={placeIcon(g.place)} color={pc.fg} />
-                  <Text style={[styles.groupTitle, { color: pc.fg }]}>{g.place}</Text>
+                  <Icon name={pc.icon} color={pc.fg} />
+                  <Text style={[styles.groupTitle, { color: pc.fg }]}>{pc.name}</Text>
                   <Text style={[styles.groupCount, { color: pc.fg }]}>{g.items.length}</Text>
                 </View>
                 <View style={styles.rows}>
@@ -59,7 +62,7 @@ export function MealPicker({ visible, onClose }: { visible: boolean; onClose: ()
                       key={it.itemId}
                       accessibilityRole="checkbox"
                       accessibilityState={{ checked: it.inMeal }}
-                      accessibilityLabel={`${it.name} ${g.place} ${it.inMeal ? '담김, 눌러서 빼기' : '눌러서 한끼에 담기'}`}
+                      accessibilityLabel={`${it.name} ${pc.name} ${it.inMeal ? '담김, 눌러서 빼기' : '눌러서 한끼에 담기'}`}
                       onPress={() =>
                         it.inMeal
                           ? actions.removeMealByItem(it.itemId)

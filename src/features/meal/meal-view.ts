@@ -2,6 +2,7 @@ import {
   amountText,
   daysBetween,
   dBadge,
+  DEFAULT_PLACES,
   DEFAULT_RULES,
   expTone,
   foodSummary,
@@ -17,6 +18,7 @@ import {
   type MealEntry,
   type Place,
   type Rules,
+  type StoragePlace,
   type Tone,
 } from '@/domain';
 
@@ -105,16 +107,19 @@ export type PickerItem = {
   inMeal: boolean;
 };
 
-/** 재료 고르기: 냉장·냉동·실온별 식품 (검색어로 거름, 급한 순) */
+/** 재료 고르기: 생활용품 종류를 뺀 장소별 식품 (검색어로 거름, 급한 순) */
 export function pickerGroups(
   items: Item[],
   meal: MealEntry[],
   today: IsoDate,
-  query: string
+  query: string,
+  places: StoragePlace[] = DEFAULT_PLACES
 ): { place: Place; items: PickerItem[] }[] {
   const q = query.trim();
   const foods = items.filter((i): i is FoodItem => i.kind === 'food');
-  return (['냉장', '냉동', '실온'] as Place[])
+  return places
+    .filter((p) => p.kind !== 'home')
+    .map((p) => p.id)
     .map((place) => {
       const rows = foods
         .filter((it) => lotsOf(it, today, place).length && (!q || it.name.includes(q)))

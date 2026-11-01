@@ -3,7 +3,6 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/screen';
-import { PLACES } from '@/domain';
 import { OptionSheet } from '@/features/settings/option-sheet';
 import { SettingGroup, SettingRow, SettingSwitch, TILES } from '@/features/settings/setting-row';
 import { useHome } from '@/stores/home-store';
@@ -33,6 +32,7 @@ export default function SettingsScreen() {
   const prefs = useHome((s) => s.prefs);
   const items = useHome((s) => s.items);
   const tasks = useHome((s) => s.tasks);
+  const places = useHome((s) => s.places);
   const actions = useHome.getState();
   const [open, setOpen] = useState<OptionKey | null>(null);
 
@@ -74,9 +74,9 @@ export default function SettingsScreen() {
           icon="fridge"
           tile={TILES.teal}
           label="보관 장소"
-          sub={PLACES.join(' · ')}
-          value={`${PLACES.length}곳`}
-          onPress={() => showToast('보관 장소는 지금 4곳으로 고정이에요')}
+          sub={places.map((p) => p.name).join(' · ')}
+          value={`${places.length}곳`}
+          onPress={() => router.push('/places')}
         />
         <SettingRow
           icon="clock"

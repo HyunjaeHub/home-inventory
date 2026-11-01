@@ -1,6 +1,9 @@
 import {
   addDays,
+  DEFAULT_PLACES,
   findByName,
+  firstOfKind,
+  kindOf,
   prefillFor,
   unitGuess,
   type AddInput,
@@ -8,6 +11,7 @@ import {
   type IsoDate,
   type Item,
   type Place,
+  type StoragePlace,
 } from '@/domain';
 
 export type ExpChoice = '3' | '7' | '14' | '30' | 'none' | 'pick';
@@ -21,7 +25,7 @@ export type AddForm = {
   qty: number;
   split: boolean;
   portions: number;
-  /** 냉동 소분일 때 냉장에 둘 팩 번호 */
+  /** 냉동 종류 소분일 때 냉장에 둘 팩 번호 */
   fridgePacks: number[];
   exp: ExpChoice;
   /** exp가 'pick'일 때 고른 날짜 */
@@ -30,11 +34,11 @@ export type AddForm = {
   unitSrc: 'hist' | 'dict' | 'user' | 'new' | null;
 };
 
-export function blankForm(): AddForm {
+export function blankForm(places: StoragePlace[] = DEFAULT_PLACES): AddForm {
   return {
     name: '',
     kind: 'food',
-    place: '냉장',
+    place: firstOfKind(places, 'fridge'),
     unit: '개',
     qty: 1,
     split: false,
@@ -88,10 +92,15 @@ export function qtyStep(form: AddForm): number {
 }
 
 /** 이름을 바꾸면: 예전에 넣은 품목은 그 설정을, 처음이면 단위 사전으로 채운다 (직접 고른 단위는 유지) */
-export function withName(form: AddForm, items: Item[], name: string): AddForm {
+export function withName(
+  form: AddForm,
+  items: Item[],
+  name: string,
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddForm {
   const trimmed = name.trim();
   if (findByName(items, trimmed)) {
-    const p = prefillFor(items, trimmed);
+    const p = prefillFor(items, trimmed, undefined, places);
     return {
       ...form,
       name,
@@ -108,9 +117,11 @@ export function withName(form: AddForm, items: Item[], name: string): AddForm {
   const g = unitGuess(name);
   if (g && form.unitSrc !== 'user') {
     const next: AddForm = { ...form, name, unit: g, unitSrc: 'dict', qty: g === 'g' ? 500 : 1 };
-    if (g === '롤' || g === '통')
-      Object.assign(next, { kind: 'cons', place: '생활', split: false });
-    else if (form.kind === 'cons') Object.assign(next, { kind: 'food', place: '냉장' });
+    if (g === '롤' || g === '통') {
+      Object.assign(next, { kind: 'cons', place: firstOfKind(places, 'home'), split: false });
+    } else if (form.kind === 'cons') {
+      Object.assign(next, { kind: 'food', place: firstOfKind(places, 'fridge') });
+    }
     if (g === 'g') next.split = true;
     return next;
   }
@@ -122,10 +133,14 @@ export function withName(form: AddForm, items: Item[], name: string): AddForm {
 }
 
 /** 정리할 것에서 '정리'로 열 때: 예전 기록 → 사전 → 담을 때 고른 장소 순으로 채운다 */
-export function fromInbox(items: Item[], entry: InboxItem): AddForm {
-  const p = prefillFor(items, entry.name, entry.place);
+export function fromInbox(
+  items: Item[],
+  entry: InboxItem,
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddForm {
+  const p = prefillFor(items, entry.name, entry.place, places);
   return {
-    ...blankForm(),
+    ...blankForm(places),
     name: entry.name,
     kind: p.kind,
     place: p.place,
@@ -137,14 +152,26 @@ export function fromInbox(items: Item[], entry: InboxItem): AddForm {
   };
 }
 
-export function withKind(form: AddForm, kind: AddForm['kind']): AddForm {
+/** 식품 ↔ 소모품: 소모품은 생활용품 종류 장소로, 식품은 생활용품 종류가 아닌 곳으로 */
+export function withKind(
+  form: AddForm,
+  kind: AddForm['kind'],
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddForm {
   if (kind === 'cons') {
-    return { ...form, kind, place: '생활', unit: '개', split: false, qty: Math.min(form.qty, 10) };
+    return {
+      ...form,
+      kind,
+      place: firstOfKind(places, 'home'),
+      unit: '개',
+      split: false,
+      qty: Math.min(form.qty, 10),
+    };
   }
   return {
     ...form,
     kind,
-    place: form.place === '생활' ? '냉장' : form.place,
+    place: kindOf(places, form.place) === 'home' ? firstOfKind(places, 'fridge') : form.place,
     unit: '개',
     qty: Math.min(form.qty, 10) || 1,
   };
@@ -161,27 +188,39 @@ export function withPortions(form: AddForm, portions: number): AddForm {
   return { ...form, portions: p, fridgePacks: form.fridgePacks.filter((k) => k < p - 1) };
 }
 
-/** 팩마다 보관 장소: 냉장 보관이면 전부 냉장, 냉동이면 고른 팩만 냉장 */
-export function packPlaces(form: AddForm): Place[] {
+/** 팩마다 보관 장소: 냉동 종류면 고른 팩만 첫 냉장 장소로, 그 외는 모두 고른 장소 */
+export function packPlaces(form: AddForm, places: StoragePlace[] = DEFAULT_PLACES): Place[] {
+  const frozen = kindOf(places, form.place) === 'freezer';
+  const fridge = firstOfKind(places, 'fridge');
   return Array.from({ length: form.portions }, (_, k) =>
-    form.place === '냉장' || (form.place === '냉동' && form.fridgePacks.includes(k))
-      ? '냉장'
-      : form.place
+    frozen && form.fridgePacks.includes(k) ? fridge : form.place
   );
 }
 
-/** 팩을 누르면 냉장 ↔ 냉동 (냉장·냉동 보관일 때만) */
-export function togglePack(form: AddForm, k: number): AddForm {
-  if (form.place === '냉장') {
+/** 팩을 누르면 냉장 ↔ 냉동 (냉장·냉동 종류 장소일 때만) */
+export function togglePack(
+  form: AddForm,
+  k: number,
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddForm {
+  const kind = kindOf(places, form.place);
+  if (kind === 'fridge') {
     const all = Array.from({ length: form.portions }, (_, i) => i).filter((i) => i !== k);
-    return { ...form, place: '냉동', fridgePacks: all };
+    return { ...form, place: firstOfKind(places, 'freezer'), fridgePacks: all };
   }
-  if (form.place !== '냉동') return form;
+  if (kind !== 'freezer') return form;
   const set = new Set(form.fridgePacks);
   if (set.has(k)) set.delete(k);
   else set.add(k);
-  if (set.size >= form.portions) return { ...form, place: '냉장', fridgePacks: [] };
+  if (set.size >= form.portions) {
+    return { ...form, place: firstOfKind(places, 'fridge'), fridgePacks: [] };
+  }
   return { ...form, fridgePacks: [...set].sort((a, b) => a - b) };
+}
+
+/** 냉장에 둘 팩 수 (냉동 종류 소분일 때만) */
+export function fridgeCount(form: AddForm, places: StoragePlace[] = DEFAULT_PLACES): number {
+  return kindOf(places, form.place) === 'freezer' ? form.fridgePacks.length : 0;
 }
 
 export function formExp(form: AddForm, today: IsoDate): IsoDate | null {
@@ -194,7 +233,11 @@ export function canSubmit(form: AddForm): boolean {
   return form.name.trim().length > 0 && form.qty > 0;
 }
 
-export function toAddInput(form: AddForm, today: IsoDate): AddInput {
+export function toAddInput(
+  form: AddForm,
+  today: IsoDate,
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddInput {
   const food = form.kind === 'food';
   return {
     name: form.name.trim(),
@@ -205,7 +248,7 @@ export function toAddInput(form: AddForm, today: IsoDate): AddInput {
     exp: food ? formExp(form, today) : null,
     split:
       food && form.split
-        ? { portions: form.portions, fridge: form.place === '냉동' ? form.fridgePacks.length : 0 }
+        ? { portions: form.portions, fridge: fridgeCount(form, places) }
         : undefined,
   };
 }

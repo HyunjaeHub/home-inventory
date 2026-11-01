@@ -55,12 +55,12 @@ export const tones = {
 
 export type Tone = keyof typeof tones;
 
-/** 보관 장소별 색: fg는 글자·아이콘, tint는 묶음 카드 바탕 */
-export const placeColors = {
-  냉장: { fg: '#2F6F73', tint: '#E1EFEE' },
-  냉동: { fg: '#4057A8', tint: '#E7EBF8' },
-  실온: { fg: '#86651A', tint: '#F4ECD6' },
-  생활: { fg: '#5D6168', tint: '#E6E7EA' },
+/** 보관 장소 종류별 색: fg는 글자·아이콘, tint는 묶음 카드 바탕 */
+export const kindColors = {
+  fridge: { fg: '#2F6F73', tint: '#E1EFEE' },
+  freezer: { fg: '#4057A8', tint: '#E7EBF8' },
+  pantry: { fg: '#86651A', tint: '#F4ECD6' },
+  home: { fg: '#5D6168', tint: '#E6E7EA' },
 } as const;
 
 export const radius = {

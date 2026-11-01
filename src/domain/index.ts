@@ -4,6 +4,7 @@ export * from './date';
 export * from './home';
 export * from './lots';
 export * from './meal';
+export * from './places';
 export * from './seed';
 export * from './shopping';
 export * from './stock';

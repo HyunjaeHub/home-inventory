@@ -1,38 +1,39 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
-import { Icon, placeIcon } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { Screen } from '@/components/screen';
 import type { Place } from '@/domain';
 import {
   filterCounts,
-  STOCK_FILTERS,
+  stockFilters,
   stockGroups,
   type StockFilter,
   type StockRow,
 } from '@/features/stock/stock-groups';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, fonts, placeColors, radius, spacing } from '@/theme';
-
-const FILTER_COLORS: Record<StockFilter, string> = {
-  전체: colors.heading,
-  ...Object.fromEntries(Object.entries(placeColors).map(([p, c]) => [p, c.fg])),
-} as Record<StockFilter, string>;
+import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 export default function StockScreen() {
   const items = useHome((s) => s.items);
   const today = useHome((s) => s.today);
-  const [filter, setFilter] = useState<StockFilter>('전체');
+  const places = useHome((s) => s.places);
+  const look = usePlaceLook();
+  const [pickedFilter, setFilter] = useState<StockFilter>('전체');
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [closed, setClosed] = useState<Partial<Record<Place, boolean>>>({});
 
-  const counts = useMemo(() => filterCounts(items, today), [items, today]);
+  // 고른 장소가 지워졌으면 전체로
+  const filter =
+    pickedFilter === '전체' || places.some((p) => p.id === pickedFilter) ? pickedFilter : '전체';
+  const counts = useMemo(() => filterCounts(items, today, places), [items, today, places]);
   const groups = useMemo(
-    () => stockGroups(items, today, filter, query),
-    [items, today, filter, query]
+    () => stockGroups(items, today, filter, query, places),
+    [items, today, filter, query, places]
   );
 
   const actions = (
@@ -89,10 +90,15 @@ export default function StockScreen() {
           </Pressable>
         </View>
       )}
-      <View style={styles.filters} accessibilityRole="tablist">
-        {STOCK_FILTERS.map((f) => {
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filters}
+        contentContainerStyle={styles.filtersInner}
+        accessibilityRole="tablist">
+        {stockFilters(places).map((f) => {
           const on = f === filter;
-          const color = on ? FILTER_COLORS[f] : '#8A8E9C';
+          const color = on ? (f === '전체' ? colors.heading : look(f).fg) : '#8A8E9C';
           return (
             <Pressable
               key={f}
@@ -100,12 +106,12 @@ export default function StockScreen() {
               accessibilityState={{ selected: on }}
               onPress={() => setFilter(f)}
               style={[styles.filter, on && { borderBottomColor: color }]}>
-              <Text style={[styles.filterLabel, { color }]}>{f}</Text>
+              <Text style={[styles.filterLabel, { color }]}>{f === '전체' ? f : look(f).name}</Text>
               <Text style={[styles.filterCount, { color }]}>{counts[f]}</Text>
             </Pressable>
           );
         })}
-      </View>
+      </ScrollView>
     </>
   );
 
@@ -114,17 +120,17 @@ export default function StockScreen() {
       <View style={styles.groups}>
         {groups.map((g) => {
           const open = !closed[g.place];
-          const pc = placeColors[g.place];
+          const pc = look(g.place);
           return (
             <View key={g.place} style={[styles.group, { backgroundColor: pc.tint }]}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ expanded: open }}
-                accessibilityLabel={`${g.place} ${g.rows.length}가지 ${open ? '접기' : '펼치기'}`}
+                accessibilityLabel={`${pc.name} ${g.rows.length}가지 ${open ? '접기' : '펼치기'}`}
                 onPress={() => setClosed((c) => ({ ...c, [g.place]: open }))}
                 style={styles.groupHead}>
-                <Icon name={placeIcon(g.place)} color={pc.fg} />
-                <Text style={[styles.groupTitle, { color: pc.fg }]}>{g.place}</Text>
+                <Icon name={pc.icon} color={pc.fg} />
+                <Text style={[styles.groupTitle, { color: pc.fg }]}>{pc.name}</Text>
                 <Text style={[styles.groupCount, { color: pc.fg }]}>{g.rows.length}가지</Text>
                 <View style={styles.chevron}>
                   <Icon name={open ? 'chevronUp' : 'chevronDown'} color={pc.fg} size={16} />
@@ -255,14 +261,20 @@ const styles = StyleSheet.create({
     color: colors.heading,
   },
   filters: {
+    flexGrow: 0,
     marginTop: 2,
     marginHorizontal: spacing.lg,
-    flexDirection: 'row',
     borderBottomWidth: 1,
     borderBottomColor: '#DCDDE3',
   },
+  // 장소가 적으면 칸을 나눠 채우고, 많으면 가로로 넘긴다
+  filtersInner: {
+    flexGrow: 1,
+  },
   filter: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 64,
+    paddingHorizontal: spacing.sm,
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',

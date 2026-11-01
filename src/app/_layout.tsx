@@ -31,6 +31,7 @@ export default function RootLayout() {
         }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="item/[id]" />
+        <Stack.Screen name="places" />
         <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>
       <Toast />

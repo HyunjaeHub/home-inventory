@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { usePlaceLook } from '@/components/place-look';
 import { Sheet } from '@/components/sheet';
 import { Stepper } from '@/components/stepper';
-import { fmt, isBulk, lotText, PLACES, type Lot, type Place } from '@/domain';
+import { firstOfKind, fmt, isBulk, kindOf, lotText, type Lot, type Place } from '@/domain';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, placeColors, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing } from '@/theme';
 
 type Props = { itemId: string; lot: Lot; onClose: () => void };
 
@@ -56,8 +57,13 @@ export function SplitSheet({ itemId, lot, onClose }: Props) {
     isBulk(lot) ? 3 : Math.min(10, Math.max(2, lot.size ? lot.qty * 2 : Math.round(lot.qty)))
   );
   const [other, setOther] = useState(0);
-  const [otherPlace, setOtherPlace] = useState<Place>(lot.place === '냉동' ? '냉장' : '냉동');
-  const choices = PLACES.filter((p) => p !== lot.place && p !== '생활');
+  const places = useHome((s) => s.places);
+  const look = usePlaceLook();
+  // 다른 곳 기본값: 냉동 종류면 첫 냉장, 아니면 첫 냉동
+  const [otherPlace, setOtherPlace] = useState<Place>(() =>
+    firstOfKind(places, kindOf(places, lot.place) === 'freezer' ? 'fridge' : 'freezer')
+  );
+  const choices = places.filter((p) => p.id !== lot.place && p.kind !== 'home').map((p) => p.id);
 
   return (
     <Sheet
@@ -84,27 +90,25 @@ export function SplitSheet({ itemId, lot, onClose }: Props) {
         }}
         onInc={() => setPortions((p) => p + 1)}
       />
+      <Text style={styles.placesLabel}>다른 곳에 둘 팩</Text>
       <View style={styles.places}>
-        <Text style={styles.placesLabel}>다른 곳에 둘 팩</Text>
         {choices.map((p) => {
           const on = p === otherPlace;
+          const pc = look(p);
           return (
             <Pressable
               key={p}
               accessibilityRole="radio"
               accessibilityState={{ selected: on }}
               onPress={() => setOtherPlace(p)}
-              style={[
-                styles.chip,
-                on && { backgroundColor: placeColors[p].tint, borderColor: placeColors[p].fg },
-              ]}>
-              <Text style={[styles.chipText, on && { color: placeColors[p].fg }]}>{p}</Text>
+              style={[styles.chip, on && { backgroundColor: pc.tint, borderColor: pc.fg }]}>
+              <Text style={[styles.chipText, on && { color: pc.fg }]}>{pc.name}</Text>
             </Pressable>
           );
         })}
       </View>
       <Stepper
-        label={`${otherPlace}에`}
+        label={`${look(otherPlace).name}에`}
         valueText={`${other}팩`}
         canDec={other > 0}
         canInc={other < portions - 1}
@@ -125,12 +129,12 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   places: {
+    marginTop: -spacing.sm,
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   placesLabel: {
-    flex: 1,
     fontSize: fontSize.bodyLarge,
     fontWeight: '700',
     color: colors.text,

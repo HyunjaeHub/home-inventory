@@ -4,17 +4,21 @@ import {
   foodSummary,
   lotAge,
   lotsOf,
-  PLACES,
+  DEFAULT_PLACES,
   totalText,
   type IsoDate,
   type Item,
   type Place,
+  type StoragePlace,
   type Tone,
 } from '@/domain';
 
+/** '전체' 또는 장소 id */
 export type StockFilter = '전체' | Place;
 
-export const STOCK_FILTERS: StockFilter[] = ['전체', ...PLACES];
+export function stockFilters(places: StoragePlace[]): StockFilter[] {
+  return ['전체', ...places.map((p) => p.id)];
+}
 
 export type StockRow = {
   itemId: string;
@@ -37,21 +41,30 @@ function inPlace(item: Item, place: StockFilter, today: IsoDate): boolean {
   return place === '전체' ? lotsOf(item, today).length > 0 : lotsOf(item, today, place).length > 0;
 }
 
-export function filterCounts(items: Item[], today: IsoDate): Record<StockFilter, number> {
+export function filterCounts(
+  items: Item[],
+  today: IsoDate,
+  places: StoragePlace[] = DEFAULT_PLACES
+): Record<StockFilter, number> {
   const out = {} as Record<StockFilter, number>;
-  for (const f of STOCK_FILTERS) out[f] = items.filter((it) => inPlace(it, f, today)).length;
+  for (const f of stockFilters(places)) {
+    out[f] = items.filter((it) => inPlace(it, f, today)).length;
+  }
   return out;
 }
 
-/** 재고 목록: 장소별 묶음, 묶음 안은 급한 순 */
+/** 재고 목록: 장소별 묶음(설정의 장소 순서), 묶음 안은 급한 순 */
 export function stockGroups(
   items: Item[],
   today: IsoDate,
   filter: StockFilter,
-  query: string
+  query: string,
+  places: StoragePlace[] = DEFAULT_PLACES
 ): StockGroup[] {
   const q = query.trim();
-  return PLACES.filter((p) => filter === '전체' || filter === p)
+  return places
+    .map((p) => p.id)
+    .filter((p) => filter === '전체' || filter === p)
     .map((place) => {
       const rows: StockRow[] = [];
       for (const it of items) {

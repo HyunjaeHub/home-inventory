@@ -72,7 +72,7 @@ describe('adjustExp / moveLot', () => {
     const { items } = seedData();
     const l = food(items, 'tofu').lots[0];
     const r = moveLot(items, 'tofu', l.id, makeCtx());
-    expect(r?.message).toBe('두부 1개 냉동실로 옮겼어요');
+    expect(r?.message).toBe('두부 1개 냉동으로 옮겼어요');
     expect(food(r!.next, 'tofu').lots.find((x) => x.id === l.id)).toMatchObject({
       place: '냉동',
       exp: '2026-11-22',

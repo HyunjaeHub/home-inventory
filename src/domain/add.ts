@@ -1,6 +1,14 @@
 import { addDays, daysBetween } from './date';
 import { cloneItems, findByName, fmt } from './lots';
 import {
+  DEFAULT_PLACES,
+  firstOfKind,
+  kindOf,
+  placeName,
+  type PlaceKind,
+  type StoragePlace,
+} from './places';
+import {
   DEFAULT_RULES,
   type Change,
   type Ctx,
@@ -32,10 +40,10 @@ export function unitGuess(name: string): string | null {
   return null;
 }
 
-/** 기한을 따로 안 정했을 때 보관 장소별 기본 기한(일) */
-export function defaultExpDays(place: Place): number {
-  if (place === '냉동') return 60;
-  if (place === '실온') return 30;
+/** 기한을 따로 안 정했을 때 장소 종류별 기본 기한(일) */
+export function defaultExpDays(kind: PlaceKind): number {
+  if (kind === 'freezer') return 60;
+  if (kind === 'pantry') return 30;
   return 7;
 }
 
@@ -54,14 +62,20 @@ export type AddPrefill = {
 
 /**
  * 이름으로 빠른 추가 폼을 미리 채운다. 예전에 넣은 적 있으면 그 설정을, 없으면 단위 사전으로 추정.
- * hintPlace: 장보기에서 넘어온 경우 담을 때 고른 장소
+ * hintPlace: 장보기에서 넘어온 경우 담을 때 고른 장소 (없으면 첫 냉장 장소)
  */
-export function prefillFor(items: Item[], name: string, hintPlace: Place = '냉장'): AddPrefill {
+export function prefillFor(
+  items: Item[],
+  name: string,
+  hintPlace?: Place,
+  places: StoragePlace[] = DEFAULT_PLACES
+): AddPrefill {
   const ex = findByName(items, name);
+  const home = firstOfKind(places, 'home');
   if (ex?.kind === 'cons') {
     return {
       kind: 'cons',
-      place: '생활',
+      place: ex.place || home,
       unit: ex.unit || '개',
       qty: 1,
       split: false,
@@ -82,16 +96,25 @@ export function prefillFor(items: Item[], name: string, hintPlace: Place = '냉�
   }
   const g = unitGuess(name);
   const source = g ? 'dict' : 'new';
-  if (hintPlace === '생활' || g === '롤' || g === '통') {
-    return { kind: 'cons', place: '생활', unit: g || '개', qty: 1, split: false, source };
+  const hint = hintPlace ?? firstOfKind(places, 'fridge');
+  const hintKind = kindOf(places, hint);
+  if (hintKind === 'home' || g === '롤' || g === '통') {
+    return {
+      kind: 'cons',
+      place: hintKind === 'home' ? hint : home,
+      unit: g || '개',
+      qty: 1,
+      split: false,
+      source,
+    };
   }
   return {
     kind: 'food',
-    place: hintPlace,
+    place: hint,
     unit: g || '개',
     qty: g === 'g' ? 600 : 1,
     split: g === 'g',
-    exp: hintPlace === '실온' ? 'none' : '7',
+    exp: hintKind === 'pantry' ? 'none' : '7',
     source,
   };
 }
@@ -104,7 +127,7 @@ export type AddInput = {
   qty: number;
   /** 기한. null이면 기한 없음 */
   exp: IsoDate | null;
-  /** 소분해서 넣기: portions팩으로 나누고, 냉동이면 그중 fridge팩은 바로 냉장에 */
+  /** 소분해서 넣기: portions팩으로 나누고, 냉동 종류면 그중 fridge팩은 바로 첫 냉장 장소에 */
   split?: { portions: number; fridge: number };
 };
 
@@ -117,6 +140,7 @@ export function addStock(
   const name = input.name.trim();
   if (!name || !(input.qty > 0)) return null;
   const rules = ctx.rules ?? DEFAULT_RULES;
+  const places = ctx.places ?? DEFAULT_PLACES;
   const next = cloneItems(items);
   let it = findByName(next, name);
   if (!it) {
@@ -126,7 +150,8 @@ export function addStock(
             id: ctx.newId(),
             name,
             kind: 'cons',
-            place: '생활',
+            place:
+              kindOf(places, input.place) === 'home' ? input.place : firstOfKind(places, 'home'),
             unit: input.unit || '개',
             qty: 0,
             every: 14,
@@ -155,12 +180,15 @@ export function addStock(
       const portions = Math.max(2, Math.min(10, input.split.portions));
       const size = input.qty / portions;
       const fridge =
-        input.place === '냉동' ? Math.max(0, Math.min(portions - 1, input.split.fridge)) : 0;
+        kindOf(places, input.place) === 'freezer'
+          ? Math.max(0, Math.min(portions - 1, input.split.fridge))
+          : 0;
       if (fridge > 0) {
         const exp = input.exp
           ? addDays(ctx.today, Math.min(daysBetween(ctx.today, input.exp), rules.chillDays))
           : null;
-        it.lots.push({ ...base, id: ctx.newId(), exp, qty: fridge, size, place: '냉장' });
+        const fridgePlace = firstOfKind(places, 'fridge');
+        it.lots.push({ ...base, id: ctx.newId(), exp, qty: fridge, size, place: fridgePlace });
       }
       it.lots.push({ ...base, id: ctx.newId(), exp: input.exp, qty: portions - fridge, size });
       it.log.unshift({
@@ -186,11 +214,13 @@ export function addStock(
 /** 정리할 것을 '그대로' 넣으면 어디에 무슨 단위로 들어가는지 (미리보기용) */
 export function inboxPlan(
   items: Item[],
-  entry: InboxItem
+  entry: InboxItem,
+  places: StoragePlace[] = DEFAULT_PLACES
 ): { kind: 'food' | 'cons'; place: Place; unit: string } {
   const it = findByName(items, entry.name);
-  if (it?.kind === 'cons' || (!it && entry.place === '생활')) {
-    return { kind: 'cons', place: '생활', unit: '개' };
+  if (it?.kind === 'cons') return { kind: 'cons', place: it.place, unit: '개' };
+  if (!it && kindOf(places, entry.place) === 'home') {
+    return { kind: 'cons', place: entry.place, unit: '개' };
   }
   const bulk = it?.kind === 'food' && (it.unit === 'g' || it.unit === 'ml');
   return {
@@ -208,7 +238,8 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
   const next = cloneItems(items);
   let it = findByName(next, entry.name);
   const today = ctx.today;
-  const plan = inboxPlan(items, entry);
+  const places = ctx.places ?? DEFAULT_PLACES;
+  const plan = inboxPlan(items, entry, places);
 
   if (plan.kind === 'cons') {
     if (!it) {
@@ -216,7 +247,7 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
         id: ctx.newId(),
         name: entry.name,
         kind: 'cons',
-        place: '생활',
+        place: plan.place,
         unit: '개',
         qty: 0,
         every: 14,
@@ -226,11 +257,12 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
     }
     if (it.kind === 'cons') it.qty += 1;
     it.log.unshift({ text: '장보기로 1개 구매', by: entry.by, date: today });
-    return { next, message: `${entry.name} 생활에 넣었어요` };
+    return { next, message: `${entry.name} ${placeName(places, plan.place)}에 넣었어요` };
   }
 
   const { place, unit } = plan;
-  const noExp = it?.kind === 'food' ? it.noExp : place === '실온';
+  const kind = kindOf(places, place);
+  const noExp = it?.kind === 'food' ? it.noExp : kind === 'pantry';
   if (!it) {
     it = { id: ctx.newId(), name: entry.name, kind: 'food', place, unit, noExp, lots: [], log: [] };
     next.push(it);
@@ -238,7 +270,7 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
   if (it.kind === 'food') {
     it.lots.push({
       id: ctx.newId(),
-      exp: noExp ? null : addDays(today, defaultExpDays(place)),
+      exp: noExp ? null : addDays(today, defaultExpDays(kind)),
       qty: 1,
       unit,
       size: null,
@@ -248,5 +280,5 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
     });
   }
   it.log.unshift({ text: `장보기로 1${unit} 넣음`, by: entry.by, date: today });
-  return { next, message: `${entry.name} ${place}에 넣었어요` };
+  return { next, message: `${entry.name} ${placeName(places, place)}에 넣었어요` };
 }

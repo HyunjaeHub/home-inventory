@@ -12,6 +12,7 @@ import {
   totalText,
   unitLabel,
 } from './lots';
+import { DEFAULT_PLACES, firstOfKind, kindOf, placeName, type StoragePlace } from './places';
 import {
   DEFAULT_RULES,
   type Change,
@@ -34,7 +35,7 @@ function foodIn(items: Item[], id: string): FoodItem | undefined {
 }
 
 /**
- * 보관 장소를 옮길 때 기한 조정.
+ * 보관 장소를 옮길 때 기한 조정 (장소 종류로 판단).
  * 냉동 → 냉장/실온: 해동했으니 chillDays 안에 먹기. 냉장/실온 → 냉동: 최소 freezeMinDays 보장.
  */
 export function adjustExp(
@@ -42,13 +43,16 @@ export function adjustExp(
   from: Place,
   to: Place,
   today: IsoDate,
-  rules: Rules = DEFAULT_RULES
+  rules: Rules = DEFAULT_RULES,
+  places: StoragePlace[] = DEFAULT_PLACES
 ): IsoDate | null {
-  if (from === '냉동' && to !== '냉동') {
+  const fromFrozen = kindOf(places, from) === 'freezer';
+  const toFrozen = kindOf(places, to) === 'freezer';
+  if (fromFrozen && !toFrozen) {
     const left = exp ? daysBetween(today, exp) : rules.chillDays;
     return addDays(today, Math.min(left, rules.chillDays));
   }
-  if (to === '냉동' && exp) {
+  if (toFrozen && exp) {
     return addDays(today, Math.max(daysBetween(today, exp), rules.freezeMinDays));
   }
   return exp;
@@ -81,15 +85,20 @@ export function eat(items: Item[], itemId: string, lotId: string | null, ctx: Ct
   };
 }
 
-/** 냉동 ↔ 냉장 옮기기. 여러 개짜리 로트면 1개(1팩)만 떼어서 옮긴다 */
+/**
+ * 냉동 ↔ 냉장 옮기기 (냉동 종류는 첫 냉장 장소로, 그 외는 첫 냉동 장소로).
+ * 여러 개짜리 로트면 1개(1팩)만 떼어서 옮긴다
+ */
 export function moveLot(items: Item[], itemId: string, lotId: string, ctx: Ctx): Change<Item[]> {
   const rules = ctx.rules ?? DEFAULT_RULES;
+  const places = ctx.places ?? DEFAULT_PLACES;
   const next = cloneItems(items);
   const it = foodIn(next, itemId);
   const lot = it?.lots.find((l) => l.id === lotId);
   if (!it || !lot) return null;
 
-  const to: Place = lot.place === '냉동' ? '냉장' : '냉동';
+  const thaw = kindOf(places, lot.place) === 'freezer';
+  const to: Place = firstOfKind(places, thaw ? 'fridge' : 'freezer');
   let moved: Lot = lot;
   if (!isBulk(lot) && lot.qty > 1) {
     lot.qty -= 1;
@@ -98,17 +107,18 @@ export function moveLot(items: Item[], itemId: string, lotId: string, ctx: Ctx):
   }
   const from = moved.place;
   moved.place = to;
-  moved.exp = adjustExp(moved.exp, from, to, ctx.today, rules);
+  moved.exp = adjustExp(moved.exp, from, to, ctx.today, rules, places);
 
-  if (to === '냉장') {
+  if (thaw) {
     log(it, `${oneText(moved)} 해동`, ctx);
     return {
       next,
       message: `${it.name} ${oneText(moved)} 해동했어요 · ${monthDay(moved.exp!)}까지 먹기`,
     };
   }
-  log(it, `${oneText(moved)} 냉동실로`, ctx);
-  return { next, message: `${it.name} ${oneText(moved)} 냉동실로 옮겼어요` };
+  const toName = placeName(places, to);
+  log(it, `${oneText(moved)} ${toName}으로`, ctx);
+  return { next, message: `${it.name} ${oneText(moved)} ${toName}으로 옮겼어요` };
 }
 
 /** 소모품 1개 사용 */
@@ -195,12 +205,13 @@ export function splitLot(
       qty: o,
       size,
       place: otherPlace,
-      exp: adjustExp(lot.exp, lot.place, otherPlace, ctx.today, ctx.rules),
+      exp: adjustExp(lot.exp, lot.place, otherPlace, ctx.today, ctx.rules, ctx.places),
     });
   }
   log(it, `${before} → ${fmt(size)}${lot.unit}씩 ${p}팩`, ctx);
+  const otherName = placeName(ctx.places ?? DEFAULT_PLACES, otherPlace);
   return {
     next,
-    message: `${it.name} ${p}팩으로 나눴어요${o > 0 ? ` · ${otherPlace} ${o}팩` : ''}`,
+    message: `${it.name} ${p}팩으로 나눴어요${o > 0 ? ` · ${otherName} ${o}팩` : ''}`,
   };
 }

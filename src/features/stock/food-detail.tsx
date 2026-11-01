@@ -2,7 +2,8 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, placeIcon, type IconName } from '@/components/icon';
+import { Icon, type IconName } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { InfoList, InfoRow } from '@/components/info-list';
 import { Screen } from '@/components/screen';
 import {
@@ -13,6 +14,7 @@ import {
   fmt,
   foodSummary,
   isBulk,
+  isColdKind,
   lotAge,
   lotText,
   lotsOf,
@@ -24,7 +26,7 @@ import {
 } from '@/domain';
 import { EditQtySheet, SplitSheet } from '@/features/stock/lot-sheets';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, fonts, placeColors, radius, spacing, tones } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing, tones } from '@/theme';
 
 /** 단위별 개수 합: '3팩 · 2개' */
 function countText(lots: Lot[], sep = ' · '): string {
@@ -52,6 +54,7 @@ export function FoodDetail({ item }: { item: FoodItem }) {
   const today = useHome((s) => s.today);
   const meal = useHome((s) => s.meal);
   const rules = useHome((s) => s.rules);
+  const look = usePlaceLook();
   const { eat, moveLot, addMeal, addToShop } = useHome.getState();
   const [sort, setSort] = useState<'exp' | 'qty'>('exp');
   const [openLots, setOpenLots] = useState<Record<string, boolean>>({});
@@ -115,12 +118,12 @@ export function FoodDetail({ item }: { item: FoodItem }) {
             <View
               key={p}
               style={styles.placeChip}
-              accessibilityLabel={`${p} ${countText(
+              accessibilityLabel={`${look(p).name} ${countText(
                 lots.filter((l) => l.place === p),
                 '·'
               )}`}>
-              <Icon name={placeIcon(p)} color={placeColors[p].fg} size={18} />
-              <Text style={[styles.placeCount, { color: placeColors[p].fg }]}>
+              <Icon name={look(p).icon} color={look(p).fg} size={18} />
+              <Text style={[styles.placeCount, { color: look(p).fg }]}>
                 {countText(
                   lots.filter((l) => l.place === p),
                   '·'
@@ -149,8 +152,9 @@ export function FoodDetail({ item }: { item: FoodItem }) {
         const open = !!openLots[lot.id];
         const d = lot.exp ? daysBetween(today, lot.exp) : null;
         const age = lotAge(lot, today);
-        const pc = placeColors[lot.place];
-        const canMove = lot.place === '냉장' || lot.place === '냉동';
+        const pc = look(lot.place);
+        const frozen = pc.kind === 'freezer';
+        const canMove = isColdKind(pc.kind);
         const canSplit = !!lot.size || isBulk(lot) || lot.qty >= 2;
         const inMeal = meal.some((m) => m.lotId === lot.id);
         const badgeColor =
@@ -165,7 +169,7 @@ export function FoodDetail({ item }: { item: FoodItem }) {
           <View key={lot.id} style={styles.lot}>
             <View style={styles.lotHead}>
               <View style={[styles.lotIcon, { backgroundColor: pc.tint }]}>
-                <Icon name={placeIcon(lot.place)} color={pc.fg} />
+                <Icon name={pc.icon} color={pc.fg} />
               </View>
               <View style={styles.lotText}>
                 <Text style={styles.lotQty} numberOfLines={1}>
@@ -217,11 +221,11 @@ export function FoodDetail({ item }: { item: FoodItem }) {
                 />
                 <LotAction
                   icon="move"
-                  label={lot.place === '냉동' ? '해동' : '옮기기'}
+                  label={frozen ? '해동' : '옮기기'}
                   disabled={!canMove}
                   accessibilityLabel={
                     canMove
-                      ? `${oneText(lot)} ${lot.place === '냉동' ? '해동하기' : '냉동실로 옮기기'}`
+                      ? `${oneText(lot)} ${frozen ? '해동하기' : '냉동으로 옮기기'}`
                       : '옮길 수 없어요'
                   }
                   onPress={() => moveLot(item.id, lot.id)}
@@ -250,7 +254,10 @@ export function FoodDetail({ item }: { item: FoodItem }) {
         ))}
       </InfoList>
       <InfoList title="설정">
-        <InfoRow label="보관 장소" value={(places.length ? places : [item.place]).join(' · ')} />
+        <InfoRow
+          label="보관 장소"
+          value={(places.length ? places : [item.place]).map((p) => look(p).name).join(' · ')}
+        />
         <InfoRow label="기한 관리" value={item.noExp ? '안 함 · 개수로만' : '함'} />
         <InfoRow label="기한 알림" value={`${rules.urgentDays}일 전`} />
       </InfoList>

@@ -2,11 +2,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Icon, placeIcon } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { addDays, daysBetween, lotAge, lotText, lotsOf, monthDay, totalText } from '@/domain';
 import { expiryStrip, weekdayOf, type StripCol } from '@/features/home/home-summary';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, fonts, placeColors, radius, spacing } from '@/theme';
+import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
 const ALERT_FG = '#B4380F';
 const ALERT_BG = '#FFD8C8';
@@ -20,6 +21,7 @@ export function ExpiryStrip() {
   const today = useHome((s) => s.today);
   const [sel, setSel] = useState<StripCol['key'] | null>(null);
   const rules = useHome((s) => s.rules);
+  const look = usePlaceLook();
   const { cols, laterCount } = expiryStrip(items, today, rules);
   const selected = cols.find((c) => c.key === sel);
 
@@ -82,7 +84,7 @@ export function ExpiryStrip() {
             </Pressable>
           </View>
           {selected.entries.map(({ item, lot }) => {
-            const pc = placeColors[lot.place];
+            const pc = look(lot.place);
             const all = lotsOf(item, today);
             const overdue = lot.exp ? daysBetween(today, lot.exp) : 0;
             const extra =
@@ -100,14 +102,14 @@ export function ExpiryStrip() {
                 onPress={() => router.push({ pathname: '/item/[id]', params: { id: item.id } })}
                 style={styles.row}>
                 <View style={[styles.tile, { backgroundColor: pc.tint }]}>
-                  <Icon name={placeIcon(lot.place)} color={pc.fg} size={16} />
+                  <Icon name={pc.icon} color={pc.fg} size={16} />
                 </View>
                 <View style={styles.rowText}>
                   <Text style={styles.rowName} numberOfLines={1}>
                     {item.name}
                   </Text>
                   <Text style={styles.rowSub} numberOfLines={1}>
-                    {lot.place}
+                    {pc.name}
                     {extra ? ` · ${extra}` : ''}
                   </Text>
                 </View>
@@ -136,6 +138,7 @@ function StripColumn({
   const alert = isAlertDay(col);
   const label = old ? '오래' : today ? '오늘' : weekdayOf(col.date);
   const num = old ? '2주+' : String(Number(col.date.split('-')[2]));
+  const look = usePlaceLook();
   const squares = col.entries.slice(0, MAX_SQUARES);
   const aria = old
     ? `2주 넘게 둔 것 ${col.entries.length}가지`
@@ -181,10 +184,7 @@ function StripColumn({
       </View>
       <View style={styles.squares}>
         {squares.map(({ lot }) => (
-          <View
-            key={lot.id}
-            style={[styles.square, { backgroundColor: placeColors[lot.place].fg }]}
-          />
+          <View key={lot.id} style={[styles.square, { backgroundColor: look(lot.place).fg }]} />
         ))}
       </View>
       {col.entries.length > MAX_SQUARES && (

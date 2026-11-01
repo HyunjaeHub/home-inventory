@@ -1,6 +1,6 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
-import type { Place } from '@/domain';
+import type { PlaceKind } from '@/domain';
 
 /** 시안에서 쓰는 선 아이콘 (24×24 viewBox) */
 const ICONS = {
@@ -122,13 +122,14 @@ export function Icon({ name, color, size = 20, strokeWidth = 2 }: Props) {
   );
 }
 
-const PLACE_ICONS: Record<Place, IconName> = {
-  냉장: 'fridge',
-  냉동: 'freezer',
-  실온: 'pantry',
-  생활: 'home',
+const KIND_ICONS: Record<PlaceKind, IconName> = {
+  fridge: 'fridge',
+  freezer: 'freezer',
+  pantry: 'pantry',
+  home: 'home',
 };
 
-export function placeIcon(place: Place): IconName {
-  return PLACE_ICONS[place];
+/** 보관 장소 종류의 아이콘 */
+export function kindIcon(kind: PlaceKind): IconName {
+  return KIND_ICONS[kind];
 }

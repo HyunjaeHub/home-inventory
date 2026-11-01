@@ -3,13 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
 import { FoldCard, FoldEmpty } from '@/components/fold-card';
-import { Icon, placeIcon } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { Screen } from '@/components/screen';
 import type { Place } from '@/domain';
 import { MealPicker } from '@/features/meal/meal-picker';
 import { mealRows, mealSuggestions } from '@/features/meal/meal-view';
 import { useHome } from '@/stores/home-store';
-import { colors, fontSize, placeColors, radius, spacing } from '@/theme';
+import { colors, fontSize, radius, spacing } from '@/theme';
 
 const MEAL = { tint: '#BFEFD9', color: '#1D5A41' };
 const SUGG = { tint: '#E4E6EC', color: colors.mutedText };
@@ -150,11 +151,11 @@ export default function MealScreen() {
 }
 
 function PlaceLine({ place, rest }: { place: Place; rest: string }) {
-  const pc = placeColors[place];
+  const pc = usePlaceLook()(place);
   return (
     <View style={styles.placeLine}>
-      <Icon name={placeIcon(place)} color={pc.fg} size={13} />
-      <Text style={[styles.placeLabel, { color: pc.fg }]}>{place}</Text>
+      <Icon name={pc.icon} color={pc.fg} size={13} />
+      <Text style={[styles.placeLabel, { color: pc.fg }]}>{pc.name}</Text>
       <Text style={styles.rest} numberOfLines={1}>
         · {rest}
       </Text>

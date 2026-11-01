@@ -1,4 +1,5 @@
 import { findByName } from './lots';
+import { DEFAULT_PLACES, firstOfKind } from './places';
 import type { Change, Ctx, InboxItem, Item, Place, ShopItem } from './types';
 
 export function inShop(shop: ShopItem[], name: string): boolean {
@@ -16,7 +17,8 @@ export function addToShop(
   const n = name.trim();
   if (!n) return null;
   if (inShop(shop, n)) return { next: shop, message: `${n}은(는) 이미 살 것에 있어요` };
-  const p = place ?? findByName(items, n)?.place ?? '실온';
+  const p =
+    place ?? findByName(items, n)?.place ?? firstOfKind(ctx.places ?? DEFAULT_PLACES, 'pantry');
   return {
     next: [...shop, { id: ctx.newId(), name: n, place: p, by: ctx.by, checked: false }],
     message: `${n} 살 것에 담았어요`,

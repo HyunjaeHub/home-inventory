@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Badge } from '@/components/badge';
 import { FoldCard, FoldEmpty } from '@/components/fold-card';
 import { Icon } from '@/components/icon';
+import { usePlaceLook } from '@/components/place-look';
 import { Screen } from '@/components/screen';
 import { consBadge, consDays, inboxPlan, inShop, runningOut } from '@/domain';
 import { useHome } from '@/stores/home-store';
@@ -16,6 +17,8 @@ const RECS = { tint: '#E4E6EC', color: colors.link };
 
 export default function ShoppingScreen() {
   const items = useHome((s) => s.items);
+  const places = useHome((s) => s.places);
+  const look = usePlaceLook();
   const shop = useHome((s) => s.shop);
   const inbox = useHome((s) => s.inbox);
   const today = useHome((s) => s.today);
@@ -94,7 +97,8 @@ export default function ShoppingScreen() {
           open
           onToggle={() => setInboxOpen(false)}>
           {inbox.map((x) => {
-            const plan = inboxPlan(items, x);
+            const plan = inboxPlan(items, x, places);
+            const planPlace = look(plan.place).name;
             return (
               <View key={x.id} style={styles.row}>
                 <View style={styles.rowText}>
@@ -102,12 +106,12 @@ export default function ShoppingScreen() {
                     {x.name}
                   </Text>
                   <Text style={styles.rowSub} numberOfLines={1}>
-                    {x.by} · 그대로 넣으면 {plan.place} 1{plan.unit}
+                    {x.by} · 그대로 넣으면 {planPlace} 1{plan.unit}
                   </Text>
                 </View>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel={`${x.name} 그대로 ${plan.place}에 넣기`}
+                  accessibilityLabel={`${x.name} 그대로 ${planPlace}에 넣기`}
                   onPress={() => actions.storeInbox(x.id)}
                   style={styles.outlineBtn}>
                   <Text style={styles.outlineText}>그대로</Text>
@@ -181,7 +185,7 @@ export default function ShoppingScreen() {
                 {x.name}
               </Text>
               <Text style={styles.rowSub}>
-                {x.place} · {x.by}
+                {look(x.place).name} · {x.by}
               </Text>
             </View>
             <Pressable
