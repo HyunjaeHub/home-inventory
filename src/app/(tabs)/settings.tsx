@@ -265,7 +265,7 @@ export default function SettingsScreen() {
       )}
       <Text style={styles.foot}>
         {household
-          ? '우리 집 데이터는 서버에 저장돼요. 함께 쓰는 사람이 바꾼 내용은 앱을 다시 열면 보여요.'
+          ? '우리 집 데이터는 서버에 저장되고, 함께 쓰는 사람이 바꾼 내용도 바로 보여요.'
           : '서버 설정이 없어 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.'}
       </Text>
 

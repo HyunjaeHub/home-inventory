@@ -76,7 +76,8 @@ export const useAuth = create<AuthState>((set, get) => ({
     // 우리 집 데이터를 읽은 뒤에 화면을 연다 (그동안 스플래시 유지)
     if (myId) {
       try {
-        await startSync(hh.id, myId, members);
+        // 합류·이름 변경으로 구성원이 바뀌면 설정 화면에도 반영
+        await startSync(hh.id, myId, members, (next) => set({ members: next }));
       } catch (e) {
         console.warn('[auth] 데이터 불러오기 실패', e);
         showToast('우리 집 데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
