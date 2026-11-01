@@ -74,17 +74,24 @@
   - 저장소에 `README.md`가 있어 임시 폴더에 생성 후 옮김 (템플릿의 `.git`, `README.md`, `LICENSE`는 제외)
   - `app.json`: 이름 "집 재고관리", slug `home-inventory`, scheme `homeinventory`, 웹 출력 `static`(Vercel 정적 배포용)
 - [x] `npx.cmd expo start` → 아이폰 Expo Go로 QR 접속 확인 ("Welcome to Expo" 화면)
-- [ ] 템플릿 예제 정리 (`npm run reset-project` 또는 직접 삭제)
-- [ ] 패키지 설치 (Expo 패키지는 반드시 `npx expo install`)
+- [x] 템플릿 예제 정리 (예제 화면·컴포넌트·이미지, `scripts/reset-project.js` 삭제)
+- [x] 패키지 설치 (Expo 패키지는 반드시 `npx expo install`)
   ```bash
-  npx expo install @supabase/supabase-js @react-native-async-storage/async-storage expo-secure-store
-  npm install @tanstack/react-query zustand
+  npx.cmd expo install @supabase/supabase-js @react-native-async-storage/async-storage expo-secure-store react-native-svg @expo-google-fonts/jua
+  npm.cmd install @tanstack/react-query zustand
+  npm.cmd install -D prettier
   ```
-- [ ] 폴더 구조 (아래 4장)
-- [ ] ESLint/Prettier, TypeScript strict, 경로 별칭(`@/`)
-- [ ] 디자인 토큰 추출: 시안의 색(오렌지/블루/그린/그레이 톤 4세트), 폰트(Noto Sans KR), 간격, 둥근 정도 → `src/theme`
-- [ ] 하단 탭 5개 + 빈 화면 라우팅
-- ✅ 완료 기준: 폰에서 탭 5개가 보이고 저장 시 핫리로드됨. 첫 커밋 푸시
+- [x] 폴더 구조: `src/app/(tabs)`, `src/components`, `src/theme`, `src/lib`
+- [x] ESLint(`npx.cmd expo lint`로 자동 설정) / Prettier(`.prettierrc`), TypeScript strict, 경로 별칭(`@/`)
+  - 스크립트: `npm run lint`, `npm run typecheck`, `npm run format`
+- [x] 디자인 토큰 추출 → `src/theme/index.ts` (색, 배지 톤 4세트, 둥근 정도, 간격, 글자 크기)
+  - 제목 폰트는 **Jua**(`@expo-google-fonts/jua`), 본문은 시스템 폰트 — Noto Sans KR은 용량이 커서 보류
+  - 라이트 모드 고정 (`app.json` `userInterfaceStyle: light`) — 시안에 다크 모드 없음
+- [x] 하단 탭 5개 + 빈 화면 라우팅
+  - 시안과 같은 모양을 위해 NativeTabs 대신 **JS Tabs + 직접 만든 탭 바**(`src/components/app-tab-bar.tsx`), 아이콘은 시안 SVG 그대로(`react-native-svg`)
+  - 탭 바에 배지 표시 지원 (`tabBarBadge` — 한끼는 초록, 장보기는 파랑)
+- [x] TanStack Query `QueryClientProvider` 연결
+- ✅ 완료 기준: 폰에서 탭 5개가 보이고 저장 시 핫리로드됨
 
 ### Phase 2 — 도메인 로직 이식 + 테스트 (1~2일) ⭐ 가장 중요
 시안 `Main.dc.html`의 로직을 UI와 분리해 `src/domain/`에 순수 함수로 이식.
