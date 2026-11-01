@@ -5,9 +5,12 @@ import {
   addStock,
   addToShop,
   buyOne,
+  changeMeal,
+  completeMeal,
   completeShop,
   eat,
   moveLot,
+  removeMeal,
   removeShop,
   removeShopByName,
   SEED_TODAY,
@@ -15,6 +18,7 @@ import {
   setLotQty,
   splitLot,
   storeInboxItem,
+  toggleMeal,
   toggleShop,
   useOne,
   type AddInput,
@@ -73,6 +77,11 @@ type HomeState = {
   toggleTask: (id: string) => void;
   clearDoneTasks: () => void;
   addMeal: (itemId: string, lotId?: string) => void;
+  changeMeal: (id: string, dir: 1 | -1) => void;
+  toggleMeal: (id: string) => void;
+  removeMeal: (id: string) => void;
+  /** 한끼 완료: 체크한 재료만큼 재고에서 뺀다 */
+  completeMeal: () => void;
   removeMealByItem: (itemId: string) => void;
 };
 
@@ -148,6 +157,15 @@ export const useHome = create<HomeState>((set, get) => {
     clearDoneTasks: () => set({ tasks: get().tasks.filter((t) => !t.done) }),
     addMeal: (itemId, lotId) =>
       apply(addMeal(get().meal, get().items, itemId, lotId ?? null, ctx()), (meal) => ({ meal })),
+    changeMeal: (id, dir) => {
+      const r = changeMeal(get().meal, get().items, id, dir, get().today);
+      set({ meal: r.next });
+      if (r.message) showToast(r.message);
+    },
+    toggleMeal: (id) => set({ meal: toggleMeal(get().meal, id) }),
+    removeMeal: (id) => set({ meal: removeMeal(get().meal, id) }),
+    completeMeal: () =>
+      apply(completeMeal(get().items, get().meal, ctx()), ({ items, meal }) => ({ items, meal })),
     removeMealByItem: (itemId) => {
       const name = get().items.find((i) => i.id === itemId)?.name ?? '';
       set({ meal: get().meal.filter((m) => m.itemId !== itemId) });
