@@ -16,11 +16,13 @@ type Props = {
   actions?: ReactNode;
   /** 제목과 스크롤 영역 사이에 고정되는 영역 (필터 등) */
   fixed?: ReactNode;
+  /** 스크롤 영역 아래에 고정되는 영역 (완료 버튼 등) */
+  footer?: ReactNode;
   children?: ReactNode;
 };
 
 /** 화면 공통 틀: 바탕색 + Jua 제목 + 스크롤 영역 */
-export function Screen({ title, subtitle, back, actions, fixed, children }: Props) {
+export function Screen({ title, subtitle, back, actions, fixed, footer, children }: Props) {
   return (
     <SafeAreaView edges={['top']} style={styles.safe}>
       <View style={styles.header}>
@@ -43,6 +45,7 @@ export function Screen({ title, subtitle, back, actions, fixed, children }: Prop
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
+      {footer && <View style={styles.footer}>{footer}</View>}
     </SafeAreaView>
   );
 }
@@ -79,6 +82,11 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     color: colors.textMuted,
+  },
+  footer: {
+    paddingTop: 10,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.md,
   },
   content: {
     paddingTop: spacing.sm,

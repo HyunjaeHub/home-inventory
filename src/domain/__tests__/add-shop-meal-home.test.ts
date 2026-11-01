@@ -1,4 +1,4 @@
-import { addStock, prefillFor, storeInboxItem, unitGuess } from '../add';
+import { addStock, inboxPlan, prefillFor, storeInboxItem, unitGuess } from '../add';
 import { expiredLotCount, expiringSoon, oldFoods, runningOut, usedUpNotInShop } from '../home';
 import { lotsOf } from '../lots';
 import { addMeal, changeMeal, completeMeal, mealStep } from '../meal';
@@ -76,6 +76,17 @@ describe('빠른 추가', () => {
         makeCtx()
       )
     ).toBeNull();
+  });
+
+  it('그대로 넣을 때 들어갈 곳 미리보기', () => {
+    const { items, inbox } = seedData();
+    expect(inboxPlan(items, inbox[0])).toEqual({ kind: 'food', place: '냉장', unit: '개' });
+    expect(inboxPlan(items, { ...inbox[0], name: '닭다리살' })).toEqual({
+      kind: 'food',
+      place: '냉동',
+      unit: '팩',
+    });
+    expect(inboxPlan(items, { ...inbox[0], name: '샴푸', place: '생활' }).kind).toBe('cons');
   });
 
   it('정리할 것을 기본값으로 바로 넣는다', () => {

@@ -1,6 +1,7 @@
 import { SEED_TODAY, seedData } from '@/domain';
 import {
   blankForm,
+  fromInbox,
   packPlaces,
   toAddInput,
   togglePack,
@@ -36,6 +37,18 @@ describe('빠른 추가 폼', () => {
 
     const user = withUnit(blankForm(), '봉');
     expect(withName(user, items, '삼겹살')).toMatchObject({ unit: '봉', unitSrc: 'user' });
+  });
+
+  it('정리할 것에서 열면 예전 기록, 없으면 담을 때 고른 장소로 채운다', () => {
+    const { items, inbox } = seedData();
+    expect(fromInbox(items, inbox[0])).toMatchObject({
+      name: '삼겹살',
+      place: '냉장',
+      unit: 'g',
+      split: true,
+      unitSrc: 'dict',
+    });
+    expect(fromInbox(items, inbox[1])).toMatchObject({ name: '대파', unit: '단', unitSrc: 'hist' });
   });
 
   it('종류를 바꾸면 장소와 단위를 맞춘다', () => {

@@ -4,6 +4,7 @@ import {
   prefillFor,
   unitGuess,
   type AddInput,
+  type InboxItem,
   type IsoDate,
   type Item,
   type Place,
@@ -117,6 +118,22 @@ export function withName(form: AddForm, items: Item[], name: string): AddForm {
     ...form,
     name,
     unitSrc: form.unitSrc === 'user' ? 'user' : trimmed ? 'new' : form.unitSrc,
+  };
+}
+
+/** 정리할 것에서 '정리'로 열 때: 예전 기록 → 사전 → 담을 때 고른 장소 순으로 채운다 */
+export function fromInbox(items: Item[], entry: InboxItem): AddForm {
+  const p = prefillFor(items, entry.name, entry.place);
+  return {
+    ...blankForm(),
+    name: entry.name,
+    kind: p.kind,
+    place: p.place,
+    unit: p.unit,
+    qty: p.qty,
+    split: p.split,
+    exp: (p.exp as ExpChoice | undefined) ?? '7',
+    unitSrc: p.source,
   };
 }
 

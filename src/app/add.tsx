@@ -27,6 +27,7 @@ import {
 } from '@/domain';
 import {
   blankForm,
+  fromInbox,
   canSubmit,
   EXP_CHOICES,
   formExp,
@@ -64,13 +65,16 @@ function toDate(iso: IsoDate): Date {
 }
 
 export default function AddScreen() {
-  const { name } = useLocalSearchParams<{ name?: string }>();
+  // name: 품목 상세의 '새로 산 것 넣기'에서, inboxId: 장보기의 '정리'에서 열 때
+  const { name, inboxId } = useLocalSearchParams<{ name?: string; inboxId?: string }>();
   const items = useHome((s) => s.items);
   const today = useHome((s) => s.today);
   const addStock = useHome((s) => s.addStock);
-  const [form, setForm] = useState<AddForm>(() =>
-    name ? withName(blankForm(), items, name) : blankForm()
-  );
+  const entry = useHome((s) => (inboxId ? s.inbox.find((x) => x.id === inboxId) : undefined));
+  const [form, setForm] = useState<AddForm>(() => {
+    if (entry) return fromInbox(items, entry);
+    return name ? withName(blankForm(), items, name) : blankForm();
+  });
   const [unitOpen, setUnitOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickDraft, setPickDraft] = useState<Date | null>(null);
@@ -83,8 +87,11 @@ export default function AddScreen() {
   const fridgeCount = form.place === '냉동' ? form.fridgePacks.length : 0;
 
   const submit = () => {
-    const id = addStock(toAddInput(form, today));
-    if (id) router.replace({ pathname: '/item/[id]', params: { id } });
+    const id = addStock(toAddInput(form, today), entry?.id);
+    if (!id) return;
+    // 장보기에서 왔으면 남은 정리할 것을 이어서 하도록 장보기로 돌아간다
+    if (entry) router.back();
+    else router.replace({ pathname: '/item/[id]', params: { id } });
   };
 
   const submitLabel = !form.name.trim()
@@ -102,14 +109,14 @@ export default function AddScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.header}>
           <Text style={styles.title} accessibilityRole="header">
-            빠른 추가
+            {entry ? '장본 것 정리' : '빠른 추가'}
           </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="닫기"
             onPress={() => router.back()}
             style={styles.close}>
-            <Icon name="plus" color={colors.text} size={24} strokeWidth={2} />
+            <Icon name="close" color={colors.text} size={24} />
           </Pressable>
         </View>
 
@@ -490,7 +497,6 @@ const styles = StyleSheet.create({
     marginRight: -10,
     alignItems: 'center',
     justifyContent: 'center',
-    transform: [{ rotate: '45deg' }],
   },
   content: {
     paddingTop: spacing.sm,

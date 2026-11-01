@@ -5,13 +5,17 @@ import {
   addStock,
   addToShop,
   buyOne,
+  completeShop,
   eat,
   moveLot,
+  removeShop,
   removeShopByName,
   SEED_TODAY,
   seedData,
   setLotQty,
   splitLot,
+  storeInboxItem,
+  toggleShop,
   useOne,
   type AddInput,
   type Change,
@@ -54,14 +58,26 @@ type HomeState = {
   ) => void;
   addToShop: (name: string, place?: Place) => void;
   removeFromShop: (name: string) => void;
-  /** 빠른 추가. 넣은 품목 id를 돌려준다 (못 넣었으면 null) */
-  addStock: (input: AddInput) => string | null;
+  toggleShop: (id: string) => void;
+  removeShop: (id: string) => void;
+  /** 장보기 완료: 체크한 것을 정리할 것으로 */
+  completeShop: () => void;
+  /** 정리할 것을 기본값 그대로 재고에 넣기 */
+  storeInbox: (inboxId: string) => void;
+  /**
+   * 빠른 추가. 넣은 품목 id를 돌려준다 (못 넣었으면 null).
+   * inboxId를 주면 정리할 것에서 온 것: 산 사람으로 기록하고 정리할 것에서 뺀다
+   */
+  addStock: (input: AddInput, inboxId?: string) => string | null;
   addMeal: (itemId: string, lotId?: string) => void;
   removeMealByItem: (itemId: string) => void;
 };
 
 let seq = 0;
 const newId = () => `${Date.now().toString(36)}-${++seq}`;
+
+const inboxLeftText = (inbox: InboxItem[]) =>
+  inbox.length ? ` · 정리할 것 ${inbox.length}개 남음` : ' · 정리 끝';
 
 export const useHome = create<HomeState>((set, get) => {
   const ctx = (): Ctx => ({ today: get().today, by: get().me, newId });
@@ -97,11 +113,26 @@ export const useHome = create<HomeState>((set, get) => {
       set({ shop: removeShopByName(get().shop, name) });
       showToast(`${name} 살 것에서 뺐어요`);
     },
-    addStock: (input) => {
-      const r = addStock(get().items, input, ctx());
+    toggleShop: (id) => set({ shop: toggleShop(get().shop, id) }),
+    removeShop: (id) => set({ shop: removeShop(get().shop, id) }),
+    completeShop: () =>
+      apply(completeShop(get().shop, get().inbox, ctx()), ({ shop, inbox }) => ({ shop, inbox })),
+    storeInbox: (inboxId) => {
+      const entry = get().inbox.find((x) => x.id === inboxId);
+      if (!entry) return;
+      const r = storeInboxItem(get().items, entry, ctx());
+      if (!r) return;
+      const inbox = get().inbox.filter((x) => x.id !== inboxId);
+      set({ items: r.next, inbox });
+      showToast(`${r.message}${inboxLeftText(inbox)}`);
+    },
+    addStock: (input, inboxId) => {
+      const entry = inboxId ? get().inbox.find((x) => x.id === inboxId) : undefined;
+      const r = addStock(get().items, input, { ...ctx(), by: entry?.by ?? get().me });
       if (!r) return null;
-      set({ items: r.next });
-      showToast(r.message);
+      const inbox = entry ? get().inbox.filter((x) => x.id !== entry.id) : get().inbox;
+      set({ items: r.next, inbox });
+      showToast(entry ? `${r.message}${inboxLeftText(inbox)}` : r.message);
       return r.itemId;
     },
     addMeal: (itemId, lotId) =>

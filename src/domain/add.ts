@@ -183,6 +183,23 @@ export function addStock(
   return { next, message, itemId: it.id };
 }
 
+/** 정리할 것을 '그대로' 넣으면 어디에 무슨 단위로 들어가는지 (미리보기용) */
+export function inboxPlan(
+  items: Item[],
+  entry: InboxItem
+): { kind: 'food' | 'cons'; place: Place; unit: string } {
+  const it = findByName(items, entry.name);
+  if (it?.kind === 'cons' || (!it && entry.place === '생활')) {
+    return { kind: 'cons', place: '생활', unit: '개' };
+  }
+  const bulk = it?.kind === 'food' && (it.unit === 'g' || it.unit === 'ml');
+  return {
+    kind: 'food',
+    place: it ? it.place : entry.place,
+    unit: bulk ? '팩' : (it?.unit ?? '개'),
+  };
+}
+
 /**
  * 정리할 것 1개를 묻지 않고 바로 재고에 넣기 (예전 설정 또는 장소별 기본값).
  * 덩어리(g/ml) 품목은 1팩으로, 소모품은 1개로 넣는다.
@@ -191,8 +208,9 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
   const next = cloneItems(items);
   let it = findByName(next, entry.name);
   const today = ctx.today;
+  const plan = inboxPlan(items, entry);
 
-  if (it?.kind === 'cons' || (!it && entry.place === '생활')) {
+  if (plan.kind === 'cons') {
     if (!it) {
       it = {
         id: ctx.newId(),
@@ -211,9 +229,7 @@ export function storeInboxItem(items: Item[], entry: InboxItem, ctx: Ctx): Chang
     return { next, message: `${entry.name} 생활에 넣었어요` };
   }
 
-  const bulk = it?.kind === 'food' && (it.unit === 'g' || it.unit === 'ml');
-  const place = it ? it.place : entry.place;
-  const unit = bulk ? '팩' : (it?.unit ?? '개');
+  const { place, unit } = plan;
   const noExp = it?.kind === 'food' ? it.noExp : place === '실온';
   if (!it) {
     it = { id: ctx.newId(), name: entry.name, kind: 'food', place, unit, noExp, lots: [], log: [] };
