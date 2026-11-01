@@ -222,16 +222,22 @@ export default function AddScreen() {
               </View>
             )}
             <View style={styles.qtyBox}>
-              <TextInput
-                value={form.qty ? String(form.qty) : ''}
-                onChangeText={(v) => {
-                  const n = parseFloat(v.replace(/[^0-9.]/g, ''));
-                  setForm((f) => ({ ...f, qty: isNaN(n) ? 0 : n }));
-                }}
-                keyboardType="decimal-pad"
-                accessibilityLabel="넣을 양"
-                style={styles.qtyInput}
-              />
+              {/* TextInput은 글자 길이만큼 늘어나지 않아서, 같은 글꼴의 숨은 Text로 너비를 잡는다 */}
+              <View>
+                <Text style={[styles.qtyInput, styles.qtyGhost]} aria-hidden>
+                  {form.qty ? String(form.qty) : '0'}
+                </Text>
+                <TextInput
+                  value={form.qty ? String(form.qty) : ''}
+                  onChangeText={(v) => {
+                    const n = parseFloat(v.replace(/[^0-9.]/g, ''));
+                    setForm((f) => ({ ...f, qty: isNaN(n) ? 0 : n }));
+                  }}
+                  keyboardType="decimal-pad"
+                  accessibilityLabel="넣을 양"
+                  style={[styles.qtyInput, StyleSheet.absoluteFill]}
+                />
+              </View>
               <Text style={styles.qtyUnit}>{form.unit}</Text>
               <Pressable
                 accessibilityRole="button"
@@ -574,13 +580,18 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   qtyInput: {
-    minWidth: 28,
-    maxWidth: 140,
     height: 44,
     padding: 0,
     fontFamily: fonts.display,
     fontSize: 30,
+    lineHeight: 44,
     color: colors.heading,
+  },
+  /** 입력칸 너비를 정하는 보이지 않는 글자 (커서 자리만큼 여유) */
+  qtyGhost: {
+    minWidth: 28,
+    paddingRight: 6,
+    opacity: 0,
   },
   qtyUnit: { flex: 1, fontFamily: fonts.display, fontSize: 30, color: colors.heading },
   qtyBtn: {
