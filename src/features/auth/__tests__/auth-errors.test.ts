@@ -1,4 +1,4 @@
-import { authErrorText, signUpProblem } from '@/features/auth/auth-errors';
+import { authErrorText, isNetworkError, signUpProblem } from '@/features/auth/auth-errors';
 
 describe('authErrorText', () => {
   it('Supabase 오류 코드를 한국어 문구로', () => {
@@ -19,6 +19,17 @@ describe('authErrorText', () => {
       '인터넷 연결을 확인해 주세요'
     );
     expect(authErrorText({ message: 'boom' })).toBe('문제가 생겼어요. 다시 해 주세요');
+  });
+});
+
+describe('isNetworkError', () => {
+  it('인터넷 문제와 서버 거절을 구분', () => {
+    expect(isNetworkError(new TypeError('Network request failed'))).toBe(true);
+    expect(isNetworkError({ message: 'TypeError: Failed to fetch' })).toBe(true);
+    expect(isNetworkError({ code: '42501', message: 'permission denied for table items' })).toBe(
+      false
+    );
+    expect(isNetworkError(null)).toBe(false);
   });
 });
 

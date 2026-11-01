@@ -45,6 +45,9 @@ export default function RootLayout() {
         <Stack.Protected guard={status === 'noHousehold'}>
           <Stack.Screen name="household" />
         </Stack.Protected>
+        <Stack.Protected guard={status === 'offline'}>
+          <Stack.Screen name="offline" />
+        </Stack.Protected>
       </Stack>
       <Toast />
     </QueryClientProvider>

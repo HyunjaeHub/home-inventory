@@ -21,8 +21,14 @@ export function authErrorText(err: { code?: string; message?: string } | null | 
   const msg = err.message ?? '';
   // DB 함수(create_household 등)가 raise한 한국어 문구는 그대로 보여 준다
   if (/[가-힣]/.test(msg)) return msg;
-  if (/network|fetch/i.test(msg)) return '인터넷 연결을 확인해 주세요';
+  if (isNetworkError(err)) return '인터넷 연결을 확인해 주세요';
   return '문제가 생겼어요. 다시 해 주세요';
+}
+
+/** 인터넷이 안 돼서 난 오류인지 (서버가 거절한 것과 구분) */
+export function isNetworkError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String((err as { message?: unknown })?.message);
+  return /network|fetch|timed? ?out|offline/i.test(msg);
 }
 
 /** 가입 전 입력 확인. 문제가 없으면 null */
