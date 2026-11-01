@@ -95,12 +95,20 @@
 
 ### Phase 2 — 도메인 로직 이식 + 테스트 (1~2일) ⭐ 가장 중요
 시안 `Main.dc.html`의 로직을 UI와 분리해 `src/domain/`에 순수 함수로 이식.
-- [ ] 타입: `Item`, `Lot`, `LogEntry`, `ShopItem`, `InboxItem`, `MealEntry`, `Task`, `Settings`
-- [ ] 날짜: `daysUntil`, `badge` (기준일을 인자로 받아 테스트 가능하게 — 시안은 오늘이 고정값)
-- [ ] 재고 연산: `eat`, `moveLot`(해동/냉동), `useOne`, `buyOne`, `split`, `totalText`, `lotsOf`(FEFO 정렬)
-- [ ] 소모품: `consDays`, `consBadge`
-- [ ] 보조: `unitGuess`, `defaultExpDays`, 장보기·한끼 연산
-- [ ] 단위 테스트(Jest): 소분, 해동 시 기한 단축, 로트 소진 순서, 배지 경계값(D-3/D-7 등)
+- [x] 타입(`types.ts`): `Item`(식품/소모품), `Lot`, `LogEntry`, `ShopItem`, `InboxItem`, `MealEntry`, `Task`, `Rules`(우리 집 규칙 기본값)
+- [x] 날짜(`date.ts`): `todayIso`, `daysBetween`, `addDays`, `monthDay` — 기준일을 인자로 받아 테스트 가능
+- [x] 로트(`lots.ts`): `lotsOf`(기한 가까운 순), `lotText`, `totalText`, 부분 팩 분리
+- [x] 배지(`badges.ts`): `dBadge`, `foodSummary`, `consDays`, `consBadge`
+- [x] 재고 연산(`stock.ts`): `eat`, `moveLot`(해동/냉동), `adjustExp`, `useOne`, `buyOne`, `setLotQty`, `splitLot`
+- [x] 빠른 추가(`add.ts`): `unitGuess`, `defaultExpDays`, `prefillFor`, `addStock`(소분 포함), `storeInboxItem`
+- [x] 장보기(`shopping.ts`), 다음 한끼(`meal.ts`), 홈 요약(`home.ts`)
+- [x] 시안 시드 데이터(`seed.ts`, 기준일 2026-10-23)
+- [x] 단위 테스트(Jest, `npm test`): 37개 — 소분, 해동 시 기한 단축, 로트 소진 순서, 배지 경계값, 한끼 차감 등
+- 설계 원칙
+  - 모든 함수는 **원본을 바꾸지 않고** 새 데이터와 토스트 문구(`{ next, message }`)를 돌려준다. 할 일이 없으면 `null`
+  - 오늘 날짜·행동한 사람·ID 생성·규칙은 `Ctx`로 넘긴다 → 나중에 Supabase(uuid, 로그인 사용자)로 그대로 교체
+  - 기록(log)은 `{ text, by, date }`로 구조화 (시안은 "1개 먹음 · 나" 문자열)
+  - 시안과 다른 점: 정리할 것 중 '생활' 장소의 새 품목은 식품이 아닌 소모품으로 넣는다
 - ✅ 완료 기준: 시안 시드 데이터로 시나리오 테스트 통과
 
 ### Phase 3 — 로컬 데이터로 화면 구현 (4~6일)
