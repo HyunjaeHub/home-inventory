@@ -59,7 +59,8 @@
 - [x] 설치: Node.js LTS(v26.13.0), Git(2.49.0) (편집기는 **Cursor** — Expo Tools / ESLint / Prettier 설치 완료)
 - [x] 폰: Expo Go 최신판 설치 (SDK 버전 불일치 시 QR이 안 열림)
 - [x] 가입: GitHub, **Expo(expo.dev) — Expo Go 접속에도 로그인이 필요해서 지금 가입함**
-- [ ] 가입: Supabase (Phase 4 전), Vercel (Phase 9 전)
+- [x] 가입: Supabase
+- [ ] 가입: Vercel (Phase 9 전)
 - [x] 저장소: https://github.com/HyunjaeHub/home-inventory.git → `C:\Git_Project\home-inventory`에 clone, Cursor로 열기
 - [ ] (선택) 프로젝트 루트에 `.cursor/rules` 또는 `CLAUDE.md`로 코딩 규칙·폴더 구조 기록
 - ✅ 완료 기준: `node -v`, `git --version` 정상, 각 계정 로그인 확인
@@ -150,25 +151,30 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
 
 ### Phase 4 — Supabase 연동: 스키마 & 인증 (2~3일)
 
-- [ ] Supabase 프로젝트 생성, 환경변수는 `EXPO_PUBLIC_SUPABASE_URL` / `..._ANON_KEY` (`.env`는 git 제외)
-- [ ] 테이블 설계 (초안)
-  | 테이블               | 주요 컬럼                                                                     |
-  | -------------------- | ----------------------------------------------------------------------------- |
-  | `households`         | id, name                                                                      |
-  | `household_members`  | household_id, user_id, display_name(나/남편)                                  |
-  | `places`             | id, household_id, name, kind(fridge/freezer/pantry/home), sort_order          |
-  | `items`              | id, household_id, name, kind, place_id, unit, no_exp, every_days, qty(소모품) |
-  | `lots`               | id, item_id, place_id, qty, unit, size, exp, bought_on, bought_by             |
-  | `item_logs`          | id, item_id, text, actor, created_at                                          |
-  | `shop_items`         | id, household_id, name, place, added_by, checked                              |
-  | `inbox_items`        | id, household_id, name, place, added_by, day                                  |
-  | `meal_entries`       | id, household_id, item_id, lot_id, qty, checked                               |
-  | `tasks`              | id, household_id, text, done                                                  |
-  | `household_settings` | household_id, jsonb(규칙 값)                                                  |
-  - `places`: 가구를 만들 때 기본 4곳(냉장·냉동·실온·생활)을 넣는다. `shop_items`·`inbox_items`의 place도 `place_id`로
-  - 장소 지우기 제한(쓰는 중·종류의 마지막 한 곳)은 앱 검사와 함께 DB 함수에서도 확인
-- [ ] **RLS 필수**: 모든 테이블 `household_id`가 내가 속한 가구일 때만 read/write
-- [ ] 인증: 이메일 매직링크 또는 이메일+비밀번호 → 세션은 `expo-secure-store`에 저장
+- [x] Supabase 프로젝트 생성 (`home-inventory`, Seoul, Free)
+  - Data API 켬, **새 테이블 자동 공개 끔**(권한은 마이그레이션에서 직접 GRANT), 자동 RLS 켬
+  - 환경변수 `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → `.env` (git 제외, 틀은 `.env.example`). secret 키는 앱에 넣지 않음
+- [x] 테이블 설계 확정 → `supabase/migrations/20261101000000_init.sql` (SQL Editor에 붙여 넣어 실행)
+  | 테이블               | 주요 컬럼                                                                                  |
+  | -------------------- | ------------------------------------------------------------------------------------------ |
+  | `households`         | id, name, invite_code                                                                      |
+  | `household_members`  | household_id, user_id(한 사람 한 가구), display_name, prefs(사람별 설정: 알림 등)          |
+  | `household_settings` | household_id, rules(jsonb, 계산 규칙), prefs(jsonb, 공용 설정: 정리함·추천·기록 보관 기간) |
+  | `places`             | id, household_id, name, kind(fridge/freezer/pantry/home), sort_order                       |
+  | `items`              | id, household_id, name, kind(food/cons), place_id, unit, no_exp, qty·every_days(소모품)    |
+  | `lots`               | id, household_id, item_id, place_id, qty, unit, size, exp, bought_on, bought_by            |
+  | `item_logs`          | id, household_id, item_id, text, actor, day                                                |
+  | `shop_items`         | id, household_id, name, place_id, added_by, checked                                        |
+  | `inbox_items`        | id, household_id, name, place_id, added_by, day                                            |
+  | `meal_entries`       | id, household_id, item_id, lot_id, label(팩/로트 단위), qty, checked                       |
+  | `tasks`              | id, household_id, text, done                                                               |
+  - 초안에서 바뀐 점: "누가"(bought_by·added_by·actor)는 이름 글자 대신 **사용자 id** → 화면에서 구성원 이름으로 표시. `meal_entries.label` 추가. 설정은 규칙+공용 설정(가구)과 사람별 설정(구성원)으로 나눔. 장소 id는 uuid (앱의 `'냉장'` 같은 id는 로컬 시드에만)
+  - 하위 테이블에도 `household_id`를 두고 (가구, id) 복합 외래키로 **다른 가구의 장소·품목을 가리킬 수 없게** 함
+  - 장소 지우기 제한: 쓰는 중이면 외래키(restrict), 종류의 마지막 한 곳이면 트리거가 막음
+  - 가구 만들기 `create_household(이름)`: 초대 코드·설정·기본 장소 4곳을 함께 만듦. 합류 `join_household(초대 코드, 이름)`
+- [x] **RLS**: 모든 테이블 `household_id = my_household_id()`일 때만 read/write. 가구·구성원은 만들기/합류 함수로만 추가, 구성원은 자기 행만 수정. 로그인 안 한 anon에는 권한 없음
+- [x] Supabase 클라이언트 `src/lib/supabase.ts`: 세션은 AES 암호화 후 AsyncStorage, 키는 `expo-secure-store` (Supabase 문서 방식, `aes-js`·`expo-crypto`). 앱이 앞에 있을 때만 토큰 자동 갱신
+- [ ] 인증: **이메일+비밀번호로 확정** (Expo Go에서 바로 동작). Apple 로그인은 정식 출시 때 추가 → 로그인·가입 화면
 - [ ] 가구 생성 + **초대 링크/코드로 배우자 합류** (설정 화면의 "초대 링크로 남편 폰 연결")
 - ✅ 완료 기준: 두 계정이 같은 가구에 속하고, 다른 가구 데이터는 조회 불가(RLS 테스트)
 
@@ -257,7 +263,7 @@ home-inventory/            # GitHub 저장소 루트
 ## 5. 시작 전 결정이 필요한 것
 
 1. ~~**설정 화면 시안 선택**~~ — ✅ **A(기본형)**로 확정 (B·C·D 시안은 삭제)
-2. **로그인 방식** — 이메일 매직링크 vs 비밀번호 vs Apple/Google 로그인(Apple 로그인은 App Store 정식 출시 시 요구될 수 있음)
+2. ~~**로그인 방식**~~ — ✅ **이메일+비밀번호**로 확정. Apple 로그인은 App Store 정식 출시 때 추가
 3. **알림 방식** — 로컬 예약 vs 서버 푸시 (Phase 7 진입 시 결정)
 4. **소모품 구매 단위** — 시안은 개수 기반. 용량(ml) 기반 관리는 v2로 미룰지
 5. **배포 범위** — TestFlight(부부 전용)로 끝낼지, 정식 출시까지 갈지
