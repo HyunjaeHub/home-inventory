@@ -56,6 +56,7 @@ let generation = 0;
 /** 서버 데이터를 스토어에 넣는 중에는 저장하지 않는다 */
 let hydrating = false;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+let channelSeq = 0;
 
 function makePeople(householdId: string, members: MemberInfo[]): People {
   return {
@@ -212,7 +213,8 @@ function enqueue(s: Session, job: () => Promise<void>) {
 
 /** 같은 가구 테이블이 바뀌면 다시 읽는다 (내 저장의 알림도 오지만 결과가 같아 화면은 그대로) */
 function listen(s: Session) {
-  const channel = supabase.channel(`household:${s.householdId}`);
+  // 같은 이름이면 정리 중인 이전 채널(이미 subscribe됨)을 돌려받아 오류가 나므로 매번 새 이름
+  const channel = supabase.channel(`household:${s.householdId}:${++channelSeq}`);
   for (const table of [...TABLES, 'household_settings', 'household_members']) {
     channel.on(
       'postgres_changes',
@@ -266,7 +268,13 @@ export async function startSync(
       enqueue(s, () => saveSettings(s, rules, prefs));
     }
   });
-  cleanups = [unsubscribe, listen(s)];
+  cleanups = [unsubscribe];
+  // 실시간 연결이 실패해도 저장은 계속 되게 따로 처리 (앱 복귀 때 다시 읽기로 보완)
+  try {
+    cleanups.push(listen(s));
+  } catch (e) {
+    console.warn('[sync] 실시간 연결 실패', e);
+  }
 }
 
 /** 로그아웃: 저장·실시간 반영을 멈추고 스토어를 비운다 */

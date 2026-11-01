@@ -36,6 +36,39 @@ type AuthState = {
 };
 
 let started = false;
+let inflight: Promise<void> | null = null;
+
+type Set = (patch: Partial<AuthState>) => void;
+type Get = () => AuthState;
+
+async function readHousehold(set: Set, get: Get) {
+  // RLS 덕분에 내 가구만 보인다
+  const [{ data: hh, error }, { data: mem }] = await Promise.all([
+    supabase.from('households').select('id, name, invite_code').maybeSingle(),
+    supabase.from('household_members').select('user_id, display_name').order('joined_at'),
+  ]);
+  if (error || !hh) {
+    set({ status: 'noHousehold', household: null, members: [] });
+    return;
+  }
+  const members = (mem ?? []).map((m) => ({ userId: m.user_id, displayName: m.display_name }));
+  const myId = get().session?.user.id;
+  // 우리 집 데이터를 읽은 뒤에 화면을 연다 (그동안 스플래시 유지)
+  if (myId) {
+    try {
+      // 합류·이름 변경으로 구성원이 바뀌면 설정 화면에도 반영
+      await startSync(hh.id, myId, members, (next) => set({ members: next }));
+    } catch (e) {
+      console.warn('[auth] 데이터 불러오기 실패', e);
+      showToast('우리 집 데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
+    }
+  }
+  set({
+    status: 'ready',
+    household: { id: hh.id, name: hh.name, inviteCode: hh.invite_code },
+    members,
+  });
+}
 
 export const useAuth = create<AuthState>((set, get) => ({
   status: hasSupabase ? 'loading' : 'ready',
@@ -61,33 +94,12 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
   },
 
-  loadHousehold: async () => {
-    // RLS 덕분에 내 가구만 보인다
-    const [{ data: hh, error }, { data: mem }] = await Promise.all([
-      supabase.from('households').select('id, name, invite_code').maybeSingle(),
-      supabase.from('household_members').select('user_id, display_name').order('joined_at'),
-    ]);
-    if (error || !hh) {
-      set({ status: 'noHousehold', household: null, members: [] });
-      return;
-    }
-    const members = (mem ?? []).map((m) => ({ userId: m.user_id, displayName: m.display_name }));
-    const myId = get().session?.user.id;
-    // 우리 집 데이터를 읽은 뒤에 화면을 연다 (그동안 스플래시 유지)
-    if (myId) {
-      try {
-        // 합류·이름 변경으로 구성원이 바뀌면 설정 화면에도 반영
-        await startSync(hh.id, myId, members, (next) => set({ members: next }));
-      } catch (e) {
-        console.warn('[auth] 데이터 불러오기 실패', e);
-        showToast('우리 집 데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
-      }
-    }
-    set({
-      status: 'ready',
-      household: { id: hh.id, name: hh.name, inviteCode: hh.invite_code },
-      members,
+  loadHousehold: () => {
+    // 로그인 이벤트가 연달아 와도(INITIAL_SESSION, SIGNED_IN) 한 번만 읽는다
+    inflight ??= readHousehold(set, get).finally(() => {
+      inflight = null;
     });
+    return inflight;
   },
 
   signIn: async (email, password) => {
