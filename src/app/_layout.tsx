@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { Toast } from '@/components/toast';
 import { queryClient } from '@/lib/query-client';
 import { colors } from '@/theme';
 
@@ -29,7 +30,10 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.background },
         }}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="item/[id]" />
+        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
       </Stack>
+      <Toast />
     </QueryClientProvider>
   );
 }

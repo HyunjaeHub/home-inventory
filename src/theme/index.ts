@@ -30,6 +30,19 @@ export const colors = {
   accentGreen: '#2E8B63',
   /** 장보기 배지 */
   accentBlue: '#1F4FB8',
+  /** 기한 임박 글자 */
+  danger: '#B4380F',
+  /** 목록 행 사이 구분 */
+  divider: '#EEEEF3',
+  /** 연한 버튼 바탕 */
+  muted: '#F1F1F5',
+  /** 버튼 글자 (연한 바탕 위) */
+  mutedText: '#3F464C',
+  /** 꺼진 버튼 */
+  disabled: '#A9AEB3',
+  /** 소모품 카드 */
+  consCard: '#DCD7FF',
+  consBar: '#4B3FB0',
 } as const;
 
 /** 배지 톤 — 시안의 tone(): 기한 임박(orange) / 소모품(blue) / 여유(green) / 기본(gray) */
@@ -41,6 +54,14 @@ export const tones = {
 } as const;
 
 export type Tone = keyof typeof tones;
+
+/** 보관 장소별 색: fg는 글자·아이콘, tint는 묶음 카드 바탕 */
+export const placeColors = {
+  냉장: { fg: '#2F6F73', tint: '#E1EFEE' },
+  냉동: { fg: '#4057A8', tint: '#E7EBF8' },
+  실온: { fg: '#86651A', tint: '#F4ECD6' },
+  생활: { fg: '#5D6168', tint: '#E6E7EA' },
+} as const;
 
 export const radius = {
   sm: 9,

@@ -1,10 +1,10 @@
 import type { BottomTabBarProps } from 'expo-router/tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { TabIcon, type TabIconName } from '@/components/tab-icon';
+import { Icon, type IconName } from '@/components/icon';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
-const ICONS: Record<string, TabIconName> = {
+const ICONS: Record<string, IconName> = {
   index: 'home',
   stock: 'stock',
   meal: 'meal',
@@ -47,7 +47,7 @@ export function AppTabBar({
             accessibilityState={{ selected: focused }}
             accessibilityLabel={label}
             style={[styles.item, focused && styles.itemActive]}>
-            <TabIcon name={ICONS[route.name] ?? 'home'} color={color} />
+            <Icon name={ICONS[route.name] ?? 'home'} color={color} size={22} />
             <Text style={[styles.label, { color, fontWeight: focused ? '700' : '500' }]}>
               {label}
             </Text>
