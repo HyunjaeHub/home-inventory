@@ -38,7 +38,8 @@ export default function ShoppingScreen() {
 
   const showInbox = inboxOpen && inbox.length > 0;
   const checked = shop.filter((s) => s.checked).length;
-  const list = [...shop.filter((s) => !s.checked), ...shop.filter((s) => s.checked)];
+  // 체크해도 자리를 지켜야 뭐가 남았는지 한눈에 보인다 (넣은 순서 그대로)
+  const list = shop;
   const rules = useHome((s) => s.rules);
   const autoRecommend = useHome((s) => s.prefs.autoRecommend);
   const recs = autoRecommend ? runningOut(items, rules).filter((it) => !inShop(shop, it.name)) : [];

@@ -33,7 +33,6 @@ export default function HomeScreen() {
   const soon = runningOut(items, rules);
   const left = tasks.filter((t) => !t.done).length;
   const done = tasks.length - left;
-  const sortedTasks = [...tasks].sort((a, b) => Number(a.done) - Number(b.done));
 
   const addTask = () => {
     actions.addTask(newTask);
@@ -119,7 +118,7 @@ export default function HomeScreen() {
           )}
         </View>
         <View style={styles.list}>
-          {sortedTasks.map((t) => (
+          {tasks.map((t) => (
             <View key={t.id} style={styles.taskRow}>
               <Pressable
                 accessibilityRole="checkbox"

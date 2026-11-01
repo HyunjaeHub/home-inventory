@@ -30,6 +30,9 @@ export type MemberInfo = { userId: string; displayName: string };
 /** 사람마다 다른 설정 (household_members.prefs), 나머지는 가구 공용 (household_settings.prefs) */
 const PERSONAL_PREFS = ['expAlert', 'lowAlert', 'alertTime'] as const;
 
+/** 넣은 순서 번호(seq)가 있는 테이블 — 체크해도 목록 순서가 그대로 */
+const ORDERED: readonly string[] = ['items', 'shop_items', 'inbox_items', 'meal_entries', 'tasks'];
+
 /** 알림이 몰려 와도(먹음 = 로트 + 기록) 한 번만 읽도록 기다리는 시간 */
 const REFRESH_DELAY_MS = 400;
 
@@ -84,7 +87,11 @@ async function loadAll(s: Session) {
   const results = await Promise.all([
     ...TABLES.map((t) => {
       const q = supabase.from(t).select('*');
-      return t === 'item_logs' ? q.order('created_at', { ascending: false }) : q;
+      // 순서를 정하지 않으면 고친 행이 뒤로 갈 수 있다 → 넣은 순서(seq)대로
+      if (ORDERED.includes(t)) return q.order('seq');
+      if (t === 'lots') return q.order('bought_on').order('id');
+      if (t === 'item_logs') return q.order('created_at', { ascending: false });
+      return q;
     }),
   ]);
   const failed = results.find((r) => r.error);
