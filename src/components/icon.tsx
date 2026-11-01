@@ -69,6 +69,32 @@ const ICONS = {
     </>
   ),
   move: <Path d="M7 7h11l-3-3M17 17H6l3 3" />,
+  user: (
+    <>
+      <Circle cx={12} cy={8} r={4} />
+      <Path d="M4 21a8 8 0 0 1 16 0" />
+    </>
+  ),
+  link: (
+    <Path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1" />
+  ),
+  bell: <Path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4" />,
+  clock: (
+    <>
+      <Circle cx={12} cy={12} r={9} />
+      <Path d="M12 7v5l3 3" />
+    </>
+  ),
+  tag: (
+    <>
+      <Path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z" />
+      <Circle cx={7.5} cy={7.5} r={1.5} />
+    </>
+  ),
+  download: <Path d="M12 4v12M7 11l5 5 5-5M5 20h14" />,
+  upload: <Path d="M12 20V8M7 13l5-5 5 5M5 4h14" />,
+  trash: <Path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />,
+  refresh: <Path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5" />,
 } as const;
 
 export type IconName = keyof typeof ICONS;

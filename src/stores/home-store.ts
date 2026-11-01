@@ -8,6 +8,7 @@ import {
   changeMeal,
   completeMeal,
   completeShop,
+  DEFAULT_RULES,
   eat,
   moveLot,
   removeMeal,
@@ -29,6 +30,7 @@ import {
   type Item,
   type MealEntry,
   type Place,
+  type Rules,
   type ShopItem,
   type Task,
 } from '@/domain';
@@ -47,6 +49,17 @@ type HomeState = {
   inbox: InboxItem[];
   meal: MealEntry[];
   tasks: Task[];
+  /** 계산에 쓰는 우리 집 규칙 (설정 화면) */
+  rules: Rules;
+  /** 계산 밖의 설정 값 (알림은 Phase 7에서 실제로 보냄) */
+  prefs: Prefs;
+
+  setRules: (patch: Partial<Rules>) => void;
+  setPrefs: (patch: Partial<Prefs>) => void;
+  /** 모든 재고·장보기·한끼를 지운다 (할 일과 설정은 남김) */
+  clearAll: () => void;
+  /** 시안 샘플 데이터로 되돌린다 (개발용) */
+  resetSample: () => void;
 
   eat: (itemId: string, lotId?: string) => void;
   moveLot: (itemId: string, lotId: string) => void;
@@ -88,11 +101,35 @@ type HomeState = {
 let seq = 0;
 const newId = () => `${Date.now().toString(36)}-${++seq}`;
 
+export type Prefs = {
+  /** 기한 알림 */
+  expAlert: boolean;
+  /** 생활용품 떨어짐 알림 */
+  lowAlert: boolean;
+  /** 알림 받는 시간 (예: '오전 9시') */
+  alertTime: string;
+  /** 곧 떨어지는 품목을 장보기에 추천 */
+  autoRecommend: boolean;
+  /** 장본 건 정리함으로 (끄면 장보기 완료 시 바로 재고에) */
+  useInbox: boolean;
+  /** 기록 보관 기간(개월) */
+  logMonths: number;
+};
+
+export const DEFAULT_PREFS: Prefs = {
+  expAlert: true,
+  lowAlert: true,
+  alertTime: '오전 9시',
+  autoRecommend: true,
+  useInbox: true,
+  logMonths: 6,
+};
+
 const inboxLeftText = (inbox: InboxItem[]) =>
   inbox.length ? ` · 정리할 것 ${inbox.length}개 남음` : ' · 정리 끝';
 
 export const useHome = create<HomeState>((set, get) => {
-  const ctx = (): Ctx => ({ today: get().today, by: get().me, newId });
+  const ctx = (): Ctx => ({ today: get().today, by: get().me, newId, rules: get().rules });
 
   /** 도메인 결과를 반영하고 토스트를 띄운다 */
   function apply<T>(change: Change<T>, update: (next: T) => Partial<HomeState>) {
@@ -106,6 +143,19 @@ export const useHome = create<HomeState>((set, get) => {
     me: '나',
     meal: [],
     ...seedData(),
+    rules: DEFAULT_RULES,
+    prefs: DEFAULT_PREFS,
+
+    setRules: (patch) => set({ rules: { ...get().rules, ...patch } }),
+    setPrefs: (patch) => set({ prefs: { ...get().prefs, ...patch } }),
+    clearAll: () => {
+      set({ items: [], shop: [], inbox: [], meal: [] });
+      showToast('모든 재고를 지웠어요');
+    },
+    resetSample: () => {
+      set({ ...seedData(), meal: [] });
+      showToast('샘플 데이터로 되돌렸어요');
+    },
 
     eat: (itemId, lotId) =>
       apply(eat(get().items, itemId, lotId ?? null, ctx()), (items) => ({ items })),
@@ -127,8 +177,21 @@ export const useHome = create<HomeState>((set, get) => {
     },
     toggleShop: (id) => set({ shop: toggleShop(get().shop, id) }),
     removeShop: (id) => set({ shop: removeShop(get().shop, id) }),
-    completeShop: () =>
-      apply(completeShop(get().shop, get().inbox, ctx()), ({ shop, inbox }) => ({ shop, inbox })),
+    completeShop: () => {
+      const r = completeShop(get().shop, get().inbox, ctx());
+      if (!r) return;
+      if (get().prefs.useInbox) {
+        set({ shop: r.next.shop, inbox: r.next.inbox });
+        showToast(r.message);
+        return;
+      }
+      // 정리함을 쓰지 않으면 산 것을 기본값 그대로 바로 재고에 넣는다
+      const added = r.next.inbox.slice(get().inbox.length);
+      let items = get().items;
+      for (const entry of added) items = storeInboxItem(items, entry, ctx())?.next ?? items;
+      set({ shop: r.next.shop, items });
+      showToast(`${added.length}개를 재고에 바로 넣었어요`);
+    },
     storeInbox: (inboxId) => {
       const entry = get().inbox.find((x) => x.id === inboxId);
       if (!entry) return;

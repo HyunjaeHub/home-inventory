@@ -9,7 +9,6 @@ import {
   ageTone,
   daysBetween,
   dBadge,
-  DEFAULT_RULES,
   expTone,
   fmt,
   foodSummary,
@@ -52,6 +51,7 @@ type SheetState = { type: 'edit' | 'split'; lot: Lot } | null;
 export function FoodDetail({ item }: { item: FoodItem }) {
   const today = useHome((s) => s.today);
   const meal = useHome((s) => s.meal);
+  const rules = useHome((s) => s.rules);
   const { eat, moveLot, addMeal, addToShop } = useHome.getState();
   const [sort, setSort] = useState<'exp' | 'qty'>('exp');
   const [openLots, setOpenLots] = useState<Record<string, boolean>>({});
@@ -60,14 +60,14 @@ export function FoodDetail({ item }: { item: FoodItem }) {
   const lots = lotsOf(item, today);
   const amount = (l: Lot) => (l.size ? l.size * l.qty : l.qty);
   const sorted = sort === 'qty' ? [...lots].sort((a, b) => amount(b) - amount(a)) : lots;
-  const sm = foodSummary(item, today);
+  const sm = foodSummary(item, today, undefined, rules);
   const places = [...new Set(lots.map((l) => l.place))];
 
   const first = sm.first;
   const firstUrgent = first
     ? first.exp
-      ? (sm.days ?? 99) <= DEFAULT_RULES.urgentDays
-      : lotAge(first, today) >= DEFAULT_RULES.oldDays
+      ? (sm.days ?? 99) <= rules.urgentDays
+      : lotAge(first, today) >= rules.oldDays
     : false;
   const firstColor = firstUrgent ? colors.danger : tones.green.fg;
 
@@ -252,7 +252,7 @@ export function FoodDetail({ item }: { item: FoodItem }) {
       <InfoList title="설정">
         <InfoRow label="보관 장소" value={(places.length ? places : [item.place]).join(' · ')} />
         <InfoRow label="기한 관리" value={item.noExp ? '안 함 · 개수로만' : '함'} />
-        <InfoRow label="기한 알림" value={`${DEFAULT_RULES.urgentDays}일 전`} />
+        <InfoRow label="기한 알림" value={`${rules.urgentDays}일 전`} />
       </InfoList>
 
       {sheet?.type === 'edit' && (

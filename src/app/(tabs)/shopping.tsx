@@ -36,7 +36,9 @@ export default function ShoppingScreen() {
   const showInbox = inboxOpen && inbox.length > 0;
   const checked = shop.filter((s) => s.checked).length;
   const list = [...shop.filter((s) => !s.checked), ...shop.filter((s) => s.checked)];
-  const recs = runningOut(items).filter((it) => !inShop(shop, it.name));
+  const rules = useHome((s) => s.rules);
+  const autoRecommend = useHome((s) => s.prefs.autoRecommend);
+  const recs = autoRecommend ? runningOut(items, rules).filter((it) => !inShop(shop, it.name)) : [];
 
   const addNew = () => {
     const name = newText.trim();

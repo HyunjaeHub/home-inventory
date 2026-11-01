@@ -27,9 +27,10 @@ export default function HomeScreen() {
   const [newTask, setNewTask] = useState('');
 
   const [, m, d] = today.split('-').map(Number);
-  const checks = checkLines(items, shop, inbox, today);
+  const rules = useHome((s) => s.rules);
+  const checks = checkLines(items, shop, inbox, today, rules);
   const names = mealNames(items, meal, today);
-  const soon = runningOut(items);
+  const soon = runningOut(items, rules);
   const left = tasks.filter((t) => !t.done).length;
   const done = tasks.length - left;
   const sortedTasks = [...tasks].sort((a, b) => Number(a.done) - Number(b.done));

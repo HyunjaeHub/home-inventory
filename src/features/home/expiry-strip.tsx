@@ -19,7 +19,8 @@ export function ExpiryStrip() {
   const items = useHome((s) => s.items);
   const today = useHome((s) => s.today);
   const [sel, setSel] = useState<StripCol['key'] | null>(null);
-  const { cols, laterCount } = expiryStrip(items, today);
+  const rules = useHome((s) => s.rules);
+  const { cols, laterCount } = expiryStrip(items, today, rules);
   const selected = cols.find((c) => c.key === sel);
 
   const [, laterM, laterD] = addDays(today, 7).split('-').map(Number);

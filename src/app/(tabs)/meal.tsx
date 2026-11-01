@@ -24,7 +24,8 @@ export default function MealScreen() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const rows = mealRows(items, meal, today);
-  const sugg = mealSuggestions(items, meal, today);
+  const rules = useHome((s) => s.rules);
+  const sugg = mealSuggestions(items, meal, today, rules);
   const checked = rows.filter((r) => r.checked).length;
 
   const footer = (
