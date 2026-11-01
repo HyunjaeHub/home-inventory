@@ -174,8 +174,15 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
   - 가구 만들기 `create_household(이름)`: 초대 코드·설정·기본 장소 4곳을 함께 만듦. 합류 `join_household(초대 코드, 이름)`
 - [x] **RLS**: 모든 테이블 `household_id = my_household_id()`일 때만 read/write. 가구·구성원은 만들기/합류 함수로만 추가, 구성원은 자기 행만 수정. 로그인 안 한 anon에는 권한 없음
 - [x] Supabase 클라이언트 `src/lib/supabase.ts`: 세션은 AES 암호화 후 AsyncStorage, 키는 `expo-secure-store` (Supabase 문서 방식, `aes-js`·`expo-crypto`). 앱이 앞에 있을 때만 토큰 자동 갱신
-- [ ] 인증: **이메일+비밀번호로 확정** (Expo Go에서 바로 동작). Apple 로그인은 정식 출시 때 추가 → 로그인·가입 화면
-- [ ] 가구 생성 + **초대 링크/코드로 배우자 합류** (설정 화면의 "초대 링크로 남편 폰 연결")
+- [x] 인증: **이메일+비밀번호** (Expo Go에서 바로 동작). Apple 로그인은 정식 출시 때 추가
+  - Supabase 설정: Authentication › Sign In / Providers › User Signups에서 **Confirm email 끔** (확인 메일 링크가 Expo Go로 돌아오지 못하므로)
+  - 상태 `src/stores/auth-store.ts`: loading → signedOut / noHousehold / ready. `.env`가 없으면 바로 ready(기기 메모리 모드)
+  - 라우트 보호: 루트 `_layout.tsx`의 `Stack.Protected` — 로그아웃이면 `sign-in`, 가구가 없으면 `household`, 준비되면 탭 화면만 열림. 상태를 읽는 동안 스플래시 유지
+  - 화면: `sign-in.tsx`(로그인·가입 전환), `household.tsx`(우리 집 만들기·초대 코드 합류, 내 이름 입력)
+  - 오류 문구: `src/features/auth/auth-errors.ts` (Supabase 오류 코드·DB 함수 메시지 → 한국어)
+- [x] 가구 생성 + **초대 코드로 배우자 합류** — 설정 › 함께 쓰는 사람에 구성원 목록, "초대 코드 보내기"(공유 시트), 계정 › 로그아웃
+  - 링크로 바로 합류(딥링크)는 개발 빌드 이후 검토. 이름 바꾸기는 다음 작업
+- [ ] 두 폰으로 확인: 가입 → 우리 집 만들기 → 다른 계정으로 코드 합류 → 서로 구성원으로 보임
 - ✅ 완료 기준: 두 계정이 같은 가구에 속하고, 다른 가구 데이터는 조회 불가(RLS 테스트)
 
 ### Phase 5 — 데이터 계층 교체 (2~3일)

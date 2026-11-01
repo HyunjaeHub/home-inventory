@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text } from 'react-native';
+import { Alert, Share, StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { OptionSheet } from '@/features/settings/option-sheet';
 import { SettingGroup, SettingRow, SettingSwitch, TILES } from '@/features/settings/setting-row';
+import { useAuth } from '@/stores/auth-store';
 import { useHome } from '@/stores/home-store';
 import { showToast } from '@/stores/toast-store';
 import { colors, fontSize, spacing } from '@/theme';
@@ -35,6 +36,23 @@ export default function SettingsScreen() {
   const places = useHome((s) => s.places);
   const actions = useHome.getState();
   const [open, setOpen] = useState<OptionKey | null>(null);
+  const household = useAuth((s) => s.household);
+  const members = useAuth((s) => s.members);
+  const myId = useAuth((s) => s.session?.user.id);
+  const email = useAuth((s) => s.session?.user.email);
+
+  const shareInvite = () => {
+    if (!household) return;
+    Share.share({
+      message: `집 재고관리에 같이 들어와요. 가입한 뒤 "초대 코드를 받았어요"에서 이 코드를 넣어 주세요: ${household.inviteCode}`,
+    });
+  };
+
+  const confirmSignOut = () =>
+    Alert.alert('로그아웃', '이 폰에서 로그아웃할까요?', [
+      { text: '취소', style: 'cancel' },
+      { text: '로그아웃', style: 'destructive', onPress: () => useAuth.getState().signOut() },
+    ]);
 
   const confirmClear = () =>
     Alert.alert('모든 재고 지우기', '재고, 살 것, 정리할 것, 다음 한끼가 모두 지워져요.', [
@@ -45,28 +63,41 @@ export default function SettingsScreen() {
   return (
     <Screen title="설정">
       <SettingGroup title="함께 쓰는 사람">
-        <SettingRow
-          icon="user"
-          tile={TILES.green}
-          label="나"
-          sub="기록에 “나”로 남아요"
-          value="이 폰"
-          onPress={() => later('내 정보')}
-        />
-        <SettingRow
-          icon="user"
-          tile={TILES.blue}
-          label="남편"
-          sub="함께 쓰기 연결 전"
-          value="초대 전"
-          onPress={() => later('함께 쓰는 사람')}
-        />
-        <SettingRow
-          icon="link"
-          tile={TILES.gray}
-          label="초대 링크 보내기"
-          onPress={() => later('초대 링크')}
-        />
+        {household ? (
+          <>
+            {members.map((m) => {
+              const isMe = m.userId === myId;
+              return (
+                <SettingRow
+                  key={m.userId}
+                  icon="user"
+                  tile={isMe ? TILES.green : TILES.blue}
+                  label={m.displayName}
+                  sub={isMe ? '기록에 내 이름으로 남아요' : '함께 쓰는 중'}
+                  value={isMe ? '나' : undefined}
+                  onPress={() => later('이름 바꾸기')}
+                />
+              );
+            })}
+            <SettingRow
+              icon="link"
+              tile={TILES.gray}
+              label="초대 코드 보내기"
+              sub={members.length < 2 ? '함께 쓸 사람이 이 코드로 합류해요' : undefined}
+              value={household.inviteCode}
+              onPress={shareInvite}
+            />
+          </>
+        ) : (
+          <SettingRow
+            icon="user"
+            tile={TILES.green}
+            label="나"
+            sub="서버 설정(.env)이 없어 이 폰에서만 써요"
+            value="이 폰"
+            onPress={() => later('함께 쓰는 사람')}
+          />
+        )}
       </SettingGroup>
 
       <SettingGroup title="보관과 기한">
@@ -209,8 +240,19 @@ export default function SettingsScreen() {
           onPress={confirmClear}
         />
       </SettingGroup>
+      {household && (
+        <SettingGroup title="계정">
+          <SettingRow
+            icon="user"
+            tile={TILES.gray}
+            label="로그아웃"
+            sub={email}
+            onPress={confirmSignOut}
+          />
+        </SettingGroup>
+      )}
       <Text style={styles.foot}>
-        지금은 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.
+        재고 데이터는 아직 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.
       </Text>
 
       {open === 'urgent' && (

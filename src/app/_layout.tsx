@@ -7,13 +7,17 @@ import { useEffect } from 'react';
 
 import { Toast } from '@/components/toast';
 import { queryClient } from '@/lib/query-client';
+import { useAuth } from '@/stores/auth-store';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
+useAuth.getState().init();
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ Jua_400Regular });
-  const ready = fontsLoaded || fontError != null;
+  const status = useAuth((s) => s.status);
+  // 폰트와 로그인 상태를 모두 읽은 뒤 스플래시를 내린다
+  const ready = (fontsLoaded || fontError != null) && status !== 'loading';
 
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
@@ -29,10 +33,18 @@ export default function RootLayout() {
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="item/[id]" />
-        <Stack.Screen name="places" />
-        <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+        <Stack.Protected guard={status === 'ready'}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="item/[id]" />
+          <Stack.Screen name="places" />
+          <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'signedOut'}>
+          <Stack.Screen name="sign-in" />
+        </Stack.Protected>
+        <Stack.Protected guard={status === 'noHousehold'}>
+          <Stack.Screen name="household" />
+        </Stack.Protected>
       </Stack>
       <Toast />
     </QueryClientProvider>
