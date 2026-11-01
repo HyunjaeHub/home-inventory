@@ -579,18 +579,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  /** iOS TextInput에 lineHeight를 주면 글자가 아래로 밀리므로 넣지 않는다 */
   qtyInput: {
     height: 44,
     padding: 0,
     fontFamily: fonts.display,
     fontSize: 30,
-    lineHeight: 44,
     color: colors.heading,
+    textAlignVertical: 'center',
   },
   /** 입력칸 너비를 정하는 보이지 않는 글자 (커서 자리만큼 여유) */
   qtyGhost: {
     minWidth: 28,
     paddingRight: 6,
+    lineHeight: 44,
     opacity: 0,
   },
   qtyUnit: { flex: 1, fontFamily: fonts.display, fontSize: 30, color: colors.heading },
