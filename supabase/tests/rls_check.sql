@@ -1,6 +1,6 @@
 -- RLS 확인 (다른 가구의 데이터를 보거나 고칠 수 없는지)
 -- Supabase SQL Editor에 통째로 붙여 넣고 Run.
---   · "Success. No rows returned" → 통과
+--   · 결과 표에 "RLS 확인 통과" → 통과
 --   · 빨간 오류 "RLS 실패: ..." → 막혀야 할 것이 뚫림
 -- 가짜 사용자 2명과 가구 2개를 만들어 확인한 뒤 마지막 rollback으로 모두 취소한다 (실제 데이터는 그대로).
 
@@ -98,5 +98,8 @@ begin
   exception when insufficient_privilege then null;
   end;
 end $$;
+
+-- SQL Editor는 결과를 돌려주는 마지막 문장만 보여 주므로, 여기까지 오면 통과 표시
+select 'RLS 확인 통과 (가짜 데이터는 아래 rollback으로 취소)' as 결과;
 
 rollback;
