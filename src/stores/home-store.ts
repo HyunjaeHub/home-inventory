@@ -1,3 +1,4 @@
+import * as Crypto from 'expo-crypto';
 import { create } from 'zustand';
 
 import {
@@ -40,16 +41,23 @@ import {
   type ShopItem,
   type Task,
 } from '@/domain';
+import { sampleFor } from '@/lib/sync/sample';
 import { showToast } from '@/stores/toast-store';
 
 /**
- * Phase 3: 서버 없이 기기 메모리에만 두는 우리 집 데이터. 앱을 다시 켜면 시드 데이터로 돌아간다.
- * Phase 5에서 Supabase로 바꿀 때 액션 이름은 그대로 두고 안쪽만 바꾼다.
+ * 우리 집 데이터. 화면과 도메인 함수는 이 스토어만 본다.
+ * - 서버 모드(server): 로그인하면 src/lib/sync/sync.ts가 서버 데이터로 채우고, 바뀔 때마다 저장한다
+ * - 로컬 모드: .env가 없을 때. 기기 메모리에만 두고 앱을 다시 켜면 시드 데이터로 돌아간다
  */
 type HomeState = {
-  /** 시드 데이터가 2026-10-23 기준이라 그 날짜로 고정. Supabase 연동 때 todayIso()로 바꾼다 */
+  /** 로컬 모드는 시드 기준일(2026-10-23)로 고정, 서버 모드는 실제 오늘 */
   today: IsoDate;
+  /** 내 이름 (기록에 남는 이름) */
   me: string;
+  /** 함께 쓰는 사람 이름 (샘플 데이터의 '남편' 자리) */
+  partner: string | null;
+  /** 서버와 동기화 중인지 */
+  server: boolean;
   items: Item[];
   shop: ShopItem[];
   inbox: InboxItem[];
@@ -73,7 +81,7 @@ type HomeState = {
   setPrefs: (patch: Partial<Prefs>) => void;
   /** 모든 재고·장보기·한끼를 지운다 (할 일과 설정은 남김) */
   clearAll: () => void;
-  /** 시안 샘플 데이터로 되돌린다 (개발용) */
+  /** 시안 샘플 데이터로 채운다 (개발용). 서버 모드면 우리 집 장소·이름·오늘 날짜에 맞춰 넣는다 */
   resetSample: () => void;
 
   eat: (itemId: string, lotId?: string) => void;
@@ -114,7 +122,8 @@ type HomeState = {
 };
 
 let seq = 0;
-const newId = () => `${Date.now().toString(36)}-${++seq}`;
+/** 새 행 id. 서버 테이블이 uuid라 uuid로 만든다 (테스트 환경처럼 못 만들면 임시 id) */
+export const newId = () => Crypto.randomUUID?.() || `${Date.now().toString(36)}-${++seq}`;
 
 export type Prefs = {
   /** 기한 알림 */
@@ -162,6 +171,8 @@ export const useHome = create<HomeState>((set, get) => {
   return {
     today: SEED_TODAY,
     me: '나',
+    partner: null,
+    server: false,
     meal: [],
     ...seedData(),
     rules: DEFAULT_RULES,
@@ -229,8 +240,10 @@ export const useHome = create<HomeState>((set, get) => {
       showToast('모든 재고를 지웠어요');
     },
     resetSample: () => {
-      set({ ...seedData(), meal: [] });
-      showToast('샘플 데이터로 되돌렸어요');
+      const { server, places, me, partner, today } = get();
+      if (server) set(sampleFor(places, { me, other: partner }, today, newId));
+      else set({ ...seedData(), meal: [] });
+      showToast('샘플 데이터로 채웠어요');
     },
 
     eat: (itemId, lotId) =>

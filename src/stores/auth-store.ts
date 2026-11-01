@@ -3,6 +3,8 @@ import { create } from 'zustand';
 
 import { authErrorText } from '@/features/auth/auth-errors';
 import { hasSupabase, supabase } from '@/lib/supabase';
+import { startSync, stopSync } from '@/lib/sync/sync';
+import { showToast } from '@/stores/toast-store';
 
 export type Member = { userId: string; displayName: string };
 export type Household = { id: string; name: string; inviteCode: string };
@@ -45,11 +47,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     if (!hasSupabase || started) return;
     started = true;
     // 콜백 안에서 Supabase를 바로 다시 부르면 막힐 수 있어 다음 틱으로 미룬다 (Supabase 문서 권고)
-    supabase.auth.onAuthStateChange((_event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       set({ session });
+      // 토큰 갱신(약 1시간마다)·사용자 정보 변경 때는 데이터를 다시 읽지 않는다
+      if (event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') return;
       setTimeout(() => {
         if (session) get().loadHousehold();
-        else set({ status: 'signedOut', household: null, members: [] });
+        else {
+          stopSync();
+          set({ status: 'signedOut', household: null, members: [] });
+        }
       }, 0);
     });
   },
@@ -64,10 +71,21 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ status: 'noHousehold', household: null, members: [] });
       return;
     }
+    const members = (mem ?? []).map((m) => ({ userId: m.user_id, displayName: m.display_name }));
+    const myId = get().session?.user.id;
+    // 우리 집 데이터를 읽은 뒤에 화면을 연다 (그동안 스플래시 유지)
+    if (myId) {
+      try {
+        await startSync(hh.id, myId, members);
+      } catch (e) {
+        console.warn('[auth] 데이터 불러오기 실패', e);
+        showToast('우리 집 데이터를 불러오지 못했어요. 인터넷 연결을 확인해 주세요');
+      }
+    }
     set({
       status: 'ready',
       household: { id: hh.id, name: hh.name, inviteCode: hh.invite_code },
-      members: (mem ?? []).map((m) => ({ userId: m.user_id, displayName: m.display_name })),
+      members,
     });
   },
 

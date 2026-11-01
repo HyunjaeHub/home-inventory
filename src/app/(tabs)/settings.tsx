@@ -48,6 +48,14 @@ export default function SettingsScreen() {
     });
   };
 
+  const confirmSample = () =>
+    household
+      ? Alert.alert('샘플 데이터 채우기', '지금 재고·살 것·정리할 것·할 일이 샘플로 바뀌어요.', [
+          { text: '취소', style: 'cancel' },
+          { text: '채우기', onPress: actions.resetSample },
+        ])
+      : actions.resetSample();
+
   const confirmSignOut = () =>
     Alert.alert('로그아웃', '이 폰에서 로그아웃할까요?', [
       { text: '취소', style: 'cancel' },
@@ -228,9 +236,13 @@ export default function SettingsScreen() {
         <SettingRow
           icon="refresh"
           tile={TILES.gray}
-          label="샘플 데이터로 되돌리기"
-          sub="개발용 · 시안 데이터로 다시 채워요"
-          onPress={actions.resetSample}
+          label="샘플 데이터 채우기"
+          sub={
+            household
+              ? '개발용 · 지금 재고를 시안 데이터로 바꿔요 (함께 쓰는 사람에게도 보여요)'
+              : '개발용 · 시안 데이터로 다시 채워요'
+          }
+          onPress={confirmSample}
         />
         <SettingRow
           icon="trash"
@@ -252,7 +264,9 @@ export default function SettingsScreen() {
         </SettingGroup>
       )}
       <Text style={styles.foot}>
-        재고 데이터는 아직 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.
+        {household
+          ? '우리 집 데이터는 서버에 저장돼요. 함께 쓰는 사람이 바꾼 내용은 앱을 다시 열면 보여요.'
+          : '서버 설정이 없어 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.'}
       </Text>
 
       {open === 'urgent' && (
