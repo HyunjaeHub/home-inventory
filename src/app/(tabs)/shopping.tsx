@@ -1,5 +1,5 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Badge } from '@/components/badge';
@@ -22,6 +22,13 @@ export default function ShoppingScreen() {
   const actions = useHome.getState();
 
   const [inboxOpen, setInboxOpen] = useState(false);
+  // 홈의 '장본 것 정리'에서 오면 정리할 것을 펼친 채로 연다
+  const { inbox: openInbox } = useLocalSearchParams<{ inbox?: string }>();
+  if (openInbox === '1' && !inboxOpen) setInboxOpen(true);
+  useEffect(() => {
+    // 다음에 홈에서 다시 눌러도 열리도록 표시를 지운다
+    if (openInbox === '1') router.setParams({ inbox: undefined });
+  }, [openInbox]);
   const [listOpen, setListOpen] = useState(true);
   const [recsOpen, setRecsOpen] = useState(true);
   const [newText, setNewText] = useState('');

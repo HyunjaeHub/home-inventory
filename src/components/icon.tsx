@@ -43,6 +43,7 @@ const ICONS = {
   chevronDown: <Path d="M6 9l6 6 6-6" />,
   chevronUp: <Path d="M6 15l6-6 6 6" />,
   back: <Path d="M15 5l-7 7 7 7" />,
+  chevronRight: <Path d="M9 5l7 7-7 7" />,
   check: <Path d="M5 12l4.5 4.5L19 7" />,
   plus: <Path d="M12 5v14M5 12h14" />,
   minus: <Path d="M5 12h14" />,

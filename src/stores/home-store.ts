@@ -69,6 +69,9 @@ type HomeState = {
    * inboxId를 주면 정리할 것에서 온 것: 산 사람으로 기록하고 정리할 것에서 뺀다
    */
   addStock: (input: AddInput, inboxId?: string) => string | null;
+  addTask: (text: string) => void;
+  toggleTask: (id: string) => void;
+  clearDoneTasks: () => void;
   addMeal: (itemId: string, lotId?: string) => void;
   removeMealByItem: (itemId: string) => void;
 };
@@ -135,6 +138,14 @@ export const useHome = create<HomeState>((set, get) => {
       showToast(entry ? `${r.message}${inboxLeftText(inbox)}` : r.message);
       return r.itemId;
     },
+    addTask: (text) => {
+      const t = text.trim();
+      if (!t) return;
+      set({ tasks: [...get().tasks, { id: newId(), text: t, done: false }] });
+    },
+    toggleTask: (id) =>
+      set({ tasks: get().tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) }),
+    clearDoneTasks: () => set({ tasks: get().tasks.filter((t) => !t.done) }),
     addMeal: (itemId, lotId) =>
       apply(addMeal(get().meal, get().items, itemId, lotId ?? null, ctx()), (meal) => ({ meal })),
     removeMealByItem: (itemId) => {
