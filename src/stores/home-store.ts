@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import {
   addMeal,
+  addStock,
   addToShop,
   buyOne,
   eat,
@@ -12,6 +13,7 @@ import {
   setLotQty,
   splitLot,
   useOne,
+  type AddInput,
   type Change,
   type Ctx,
   type InboxItem,
@@ -52,6 +54,8 @@ type HomeState = {
   ) => void;
   addToShop: (name: string, place?: Place) => void;
   removeFromShop: (name: string) => void;
+  /** 빠른 추가. 넣은 품목 id를 돌려준다 (못 넣었으면 null) */
+  addStock: (input: AddInput) => string | null;
   addMeal: (itemId: string, lotId?: string) => void;
   removeMealByItem: (itemId: string) => void;
 };
@@ -92,6 +96,13 @@ export const useHome = create<HomeState>((set, get) => {
     removeFromShop: (name) => {
       set({ shop: removeShopByName(get().shop, name) });
       showToast(`${name} 살 것에서 뺐어요`);
+    },
+    addStock: (input) => {
+      const r = addStock(get().items, input, ctx());
+      if (!r) return null;
+      set({ items: r.next });
+      showToast(r.message);
+      return r.itemId;
     },
     addMeal: (itemId, lotId) =>
       apply(addMeal(get().meal, get().items, itemId, lotId ?? null, ctx()), (meal) => ({ meal })),
