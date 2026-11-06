@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 
 import { Toast } from '@/components/toast';
 import { queryClient } from '@/lib/query-client';
+import { WebAppInsets } from '@/lib/web-app';
 import { useAuth } from '@/stores/auth-store';
 import { colors } from '@/theme';
 
@@ -28,28 +29,30 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: { backgroundColor: colors.background },
-        }}>
-        <Stack.Protected guard={status === 'ready'}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="item/[id]" />
-          <Stack.Screen name="places" />
-          <Stack.Screen name="add" options={{ presentation: 'modal' }} />
-        </Stack.Protected>
-        <Stack.Protected guard={status === 'signedOut'}>
-          <Stack.Screen name="sign-in" />
-        </Stack.Protected>
-        <Stack.Protected guard={status === 'noHousehold'}>
-          <Stack.Screen name="household" />
-        </Stack.Protected>
-        <Stack.Protected guard={status === 'offline'}>
-          <Stack.Screen name="offline" />
-        </Stack.Protected>
-      </Stack>
-      <Toast />
+      <WebAppInsets>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+          }}>
+          <Stack.Protected guard={status === 'ready'}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="item/[id]" />
+            <Stack.Screen name="places" />
+            <Stack.Screen name="add" options={{ presentation: 'modal' }} />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'signedOut'}>
+            <Stack.Screen name="sign-in" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'noHousehold'}>
+            <Stack.Screen name="household" />
+          </Stack.Protected>
+          <Stack.Protected guard={status === 'offline'}>
+            <Stack.Screen name="offline" />
+          </Stack.Protected>
+        </Stack>
+        <Toast />
+      </WebAppInsets>
     </QueryClientProvider>
   );
 }
