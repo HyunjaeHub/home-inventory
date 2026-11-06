@@ -245,6 +245,8 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
   - [x] 웹에서 안 되던 것 수정: 확인 창(`Alert`는 웹에서 버튼 창이 안 뜸) → `src/lib/confirm.ts`(웹은 `window.confirm`), 유통기한 날짜 선택기(웹 미지원) → `src/features/add/expiry-picker.web.tsx`(브라우저 날짜 입력), 초대 코드 공유가 안 되면 복사
   - [x] 웹 출력 `single`(SPA)로 변경 + `vercel.json`(빌드 `expo export -p web`, 출력 `dist`, 모든 주소 → `/`). 로그인 뒤에서만 쓰는 앱이라 정적 HTML이 필요 없음
   - [x] 홈 화면 아이콘 `public/apple-touch-icon.png`(지금은 템플릿 기본 아이콘 → 나중에 교체)
+  - [x] 아이폰에서 앱처럼: `public/index.html`(Expo가 이 파일을 웹 HTML 틀로 씀) — `lang="ko"`, `viewport-fit=cover`(안전 영역), 입력칸 자동 확대·핀치 확대 막기, 홈 화면 앱 메타(주소창 없는 전체 화면), 당겨서 튕기기 막기·바탕색, 화면 높이 `100dvh`
+    - Safari 일반 화면에서 제목이 흐릿해 보이던 것은 Safari 위쪽 반투명 막대와 겹친 탓으로 보임 → 홈 화면에 추가해서 열면 막대가 없음
   - [x] 로컬 모드(`EXPO_NO_DOTENV=1`, 샘플 데이터)로 브라우저 확인: 홈·빠른 추가 날짜 고르기·설정 확인 창 동작
   - [ ] Vercel: GitHub 저장소 연결, 환경변수 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 등록 → `main` 푸시마다 자동 배포
   - [ ] 두 폰에서 웹 주소로 로그인·실시간 반영 확인
