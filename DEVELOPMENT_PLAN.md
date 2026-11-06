@@ -248,8 +248,8 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
   - [x] 아이폰에서 앱처럼: `public/index.html`(Expo가 이 파일을 웹 HTML 틀로 씀) — `lang="ko"`, `viewport-fit=cover`(안전 영역), 입력칸 자동 확대·핀치 확대 막기, 홈 화면 앱 메타(주소창 없는 전체 화면), 당겨서 튕기기 막기·바탕색, 화면 높이 `100dvh`
     - Safari 일반 화면에서 제목이 흐릿해 보이던 것은 Safari 위쪽 반투명 막대와 겹친 탓으로 보임 → 홈 화면에 추가해서 열면 막대가 없음
   - [x] 로컬 모드(`EXPO_NO_DOTENV=1`, 샘플 데이터)로 브라우저 확인: 홈·빠른 추가 날짜 고르기·설정 확인 창 동작
-  - [ ] Vercel: GitHub 저장소 연결, 환경변수 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 등록 → `main` 푸시마다 자동 배포
-  - [ ] 두 폰에서 웹 주소로 로그인·실시간 반영 확인
+  - [x] Vercel: GitHub 저장소 연결, 환경변수 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 등록 → `main` 푸시마다 자동 배포 (2026-11-06)
+  - [x] 아이폰 홈 화면 앱으로 열어 화면 맞춤·제목 선명함 확인 (2026-11-06). 주소는 Vercel 프로젝트 › Domains의 고정 주소 사용
   - 한계: 알림(웹 푸시)은 iOS에서 홈 화면 앱에만 되고 번거로움 → 알림은 네이티브 빌드에서
 - [ ] **iOS**: `npm i -g eas-cli` → `eas login` → `eas build:configure` → `eas build --platform ios`
 - [ ] Apple Developer Program 가입($99/년) → TestFlight로 부부 폰 설치 → (선택) App Store 제출
