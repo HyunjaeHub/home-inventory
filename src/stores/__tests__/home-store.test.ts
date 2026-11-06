@@ -51,6 +51,16 @@ describe('home-store 설정 반영', () => {
     expect(s().updatePlace('냉동', { kind: 'pantry' })).toBe(false);
   });
 
+  it('할 일 하나 고치기·지우기 (다른 할 일과 순서는 그대로)', () => {
+    const s = () => useHome.getState();
+    const [first, second] = s().tasks;
+    expect(s().updateTask(first.id, '  ')).toBe(false);
+    expect(s().updateTask(first.id, ' 냉장고 맨 위 칸 닦기 ')).toBe(true);
+    expect(s().tasks[0]).toMatchObject({ id: first.id, text: '냉장고 맨 위 칸 닦기' });
+    s().removeTask(first.id);
+    expect(s().tasks.map((t) => t.id)).toEqual([second.id]);
+  });
+
   it('정리함을 켜면 정리할 것으로 옮긴다', () => {
     useHome.getState().completeShop();
     expect(useHome.getState().inbox.map((x) => x.name)).toEqual(['삼겹살', '대파', '우유', '샴푸']);

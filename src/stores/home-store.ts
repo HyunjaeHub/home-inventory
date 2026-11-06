@@ -111,6 +111,10 @@ type HomeState = {
   addStock: (input: AddInput, inboxId?: string) => string | null;
   addTask: (text: string) => void;
   toggleTask: (id: string) => void;
+  /** 할 일 글자 고치기. 비우면 고치지 않고 false */
+  updateTask: (id: string, text: string) => boolean;
+  /** 할 일 하나 지우기 (잘못 쓴 것) */
+  removeTask: (id: string) => void;
   clearDoneTasks: () => void;
   addMeal: (itemId: string, lotId?: string) => void;
   changeMeal: (id: string, dir: 1 | -1) => void;
@@ -306,6 +310,19 @@ export const useHome = create<HomeState>((set, get) => {
     },
     toggleTask: (id) =>
       set({ tasks: get().tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t)) }),
+    updateTask: (id, text) => {
+      const t = text.trim();
+      if (!t) return false;
+      set({ tasks: get().tasks.map((x) => (x.id === id ? { ...x, text: t } : x)) });
+      showToast(`‘${t}’로 고쳤어요`);
+      return true;
+    },
+    removeTask: (id) => {
+      const task = get().tasks.find((x) => x.id === id);
+      if (!task) return;
+      set({ tasks: get().tasks.filter((x) => x.id !== id) });
+      showToast(`‘${task.text}’ 지웠어요`);
+    },
     clearDoneTasks: () => set({ tasks: get().tasks.filter((t) => !t.done) }),
     addMeal: (itemId, lotId) =>
       apply(addMeal(get().meal, get().items, itemId, lotId ?? null, ctx()), (meal) => ({ meal })),

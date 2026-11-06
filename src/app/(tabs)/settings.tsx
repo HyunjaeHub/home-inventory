@@ -4,6 +4,7 @@ import { Share, StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { OptionSheet } from '@/features/settings/option-sheet';
+import { PasswordSheet } from '@/features/settings/password-sheet';
 import { SettingGroup, SettingRow, SettingSwitch, TILES } from '@/features/settings/setting-row';
 import { confirmAction } from '@/lib/confirm';
 import { useAuth } from '@/stores/auth-store';
@@ -37,6 +38,7 @@ export default function SettingsScreen() {
   const places = useHome((s) => s.places);
   const actions = useHome.getState();
   const [open, setOpen] = useState<OptionKey | null>(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const household = useAuth((s) => s.household);
   const members = useAuth((s) => s.members);
   const myId = useAuth((s) => s.session?.user.id);
@@ -269,6 +271,12 @@ export default function SettingsScreen() {
       {household && (
         <SettingGroup title="계정">
           <SettingRow
+            icon="key"
+            tile={TILES.gray}
+            label="비밀번호 바꾸기"
+            onPress={() => setPasswordOpen(true)}
+          />
+          <SettingRow
             icon="user"
             tile={TILES.gray}
             label="로그아웃"
@@ -283,6 +291,7 @@ export default function SettingsScreen() {
           : '서버 설정이 없어 이 폰에만 저장돼요. 앱을 다시 켜면 샘플 데이터로 돌아가요.'}
       </Text>
 
+      {passwordOpen && <PasswordSheet onClose={() => setPasswordOpen(false)} />}
       {open === 'urgent' && (
         <OptionSheet
           title="기한 임박 기준"

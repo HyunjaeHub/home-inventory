@@ -1,4 +1,9 @@
-import { authErrorText, isNetworkError, signUpProblem } from '@/features/auth/auth-errors';
+import {
+  authErrorText,
+  isNetworkError,
+  newPasswordProblem,
+  signUpProblem,
+} from '@/features/auth/auth-errors';
 
 describe('authErrorText', () => {
   it('Supabase 오류 코드를 한국어 문구로', () => {
@@ -30,6 +35,21 @@ describe('isNetworkError', () => {
       false
     );
     expect(isNetworkError(null)).toBe(false);
+  });
+});
+
+describe('newPasswordProblem', () => {
+  it('입력하는 동안은 빈 칸을 탓하지 않고, 바꾸기를 누르면 알려 준다', () => {
+    expect(newPasswordProblem('', '')).toBeNull();
+    expect(newPasswordProblem('', '', true)).toBe('새 비밀번호를 넣어 주세요');
+    expect(newPasswordProblem('abc', '')).toBe('비밀번호는 6자 이상이어야 해요');
+    expect(newPasswordProblem('abcdef', '')).toBeNull();
+    expect(newPasswordProblem('abcdef', '', true)).toBe('한 번 더 넣어 주세요');
+    expect(newPasswordProblem('abcdef', 'abcdeg')).toBe('두 비밀번호가 달라요');
+    expect(newPasswordProblem('abcdef', 'abcdef', true)).toBeNull();
+  });
+  it('같은 비밀번호 오류 코드', () => {
+    expect(authErrorText({ code: 'same_password' })).toBe('지금 쓰는 비밀번호와 같아요');
   });
 });
 

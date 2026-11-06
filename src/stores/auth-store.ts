@@ -31,6 +31,8 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<string | null>;
   signUp: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
+  /** 로그인한 계정의 비밀번호 바꾸기. 성공하면 null */
+  changePassword: (password: string) => Promise<string | null>;
   createHousehold: (displayName: string) => Promise<string | null>;
   joinHousehold: (inviteCode: string, displayName: string) => Promise<string | null>;
   /** 내 가구·구성원을 다시 읽는다 */
@@ -135,6 +137,11 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     await supabase.auth.signOut();
+  },
+
+  changePassword: async (password) => {
+    const { error } = await supabase.auth.updateUser({ password });
+    return error ? authErrorText(error) : null;
   },
 
   createHousehold: async (displayName) => {

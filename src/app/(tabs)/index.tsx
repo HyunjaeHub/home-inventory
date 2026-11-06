@@ -5,9 +5,10 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Badge } from '@/components/badge';
 import { Icon } from '@/components/icon';
 import { Screen } from '@/components/screen';
-import { consBadge, consDays, inShop, runningOut } from '@/domain';
+import { consBadge, consDays, inShop, runningOut, type Task } from '@/domain';
 import { ExpiryStrip } from '@/features/home/expiry-strip';
 import { checkLines, mealNames, weekdayOf, type CheckLine } from '@/features/home/home-summary';
+import { TaskMenu } from '@/features/home/task-sheets';
 import { useHome } from '@/stores/home-store';
 import { colors, fontSize, fonts, radius, spacing } from '@/theme';
 
@@ -25,6 +26,8 @@ export default function HomeScreen() {
   const tasks = useHome((s) => s.tasks);
   const actions = useHome.getState();
   const [newTask, setNewTask] = useState('');
+  /** 길게 눌러 메뉴를 연 할 일 */
+  const [menuTask, setMenuTask] = useState<Task | null>(null);
 
   const [, m, d] = today.split('-').map(Number);
   const rules = useHome((s) => s.rules);
@@ -132,13 +135,23 @@ export default function HomeScreen() {
                   )}
                 </View>
               </Pressable>
-              <Text
-                style={[
-                  styles.taskText,
-                  t.done && { textDecorationLine: 'line-through', color: colors.textSecondary },
-                ]}>
-                {t.text}
-              </Text>
+              {/* 글자 부분을 길게 누르면 고치기·지우기 (체크는 왼쪽 상자) */}
+              <Pressable
+                onLongPress={() => setMenuTask(t)}
+                delayLongPress={450}
+                accessibilityHint="길게 누르면 고치거나 지울 수 있어요"
+                accessibilityActions={[{ name: 'longpress', label: '고치기·지우기' }]}
+                onAccessibilityAction={() => setMenuTask(t)}
+                style={({ pressed }) => [styles.taskTextHit, pressed && styles.taskPressed]}>
+                <Text
+                  selectable={false}
+                  style={[
+                    styles.taskText,
+                    t.done && { textDecorationLine: 'line-through', color: colors.textSecondary },
+                  ]}>
+                  {t.text}
+                </Text>
+              </Pressable>
             </View>
           ))}
           <View style={styles.addRow}>
@@ -227,6 +240,7 @@ export default function HomeScreen() {
           </View>
         </View>
       )}
+      {menuTask && <TaskMenu task={menuTask} onClose={() => setMenuTask(null)} />}
     </Screen>
   );
 }
@@ -330,7 +344,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkBoxOn: { borderColor: colors.toast, backgroundColor: colors.toast },
-  taskText: { flex: 1, fontSize: fontSize.bodyLarge, fontWeight: '500', color: colors.text },
+  taskTextHit: {
+    flex: 1,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: radius.sm,
+    // 웹에서 길게 누를 때 글자 선택·확대 대신 메뉴가 뜨도록
+    userSelect: 'none',
+  },
+  taskPressed: { backgroundColor: colors.muted },
+  taskText: { fontSize: fontSize.bodyLarge, fontWeight: '500', color: colors.text },
   addRow: {
     height: 52,
     paddingLeft: 14,
