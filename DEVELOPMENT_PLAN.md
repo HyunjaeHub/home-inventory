@@ -244,7 +244,10 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
 - [ ] **웹 (앞당겨 진행)**: PC·Expo Go 없이 둘이 바로 써 보려고 Phase 7 전에 웹으로 먼저 배포. 아이폰은 Safari › 공유 › 홈 화면에 추가
   - [x] 웹에서 안 되던 것 수정: 확인 창(`Alert`는 웹에서 버튼 창이 안 뜸) → `src/lib/confirm.ts`(웹은 `window.confirm`), 유통기한 날짜 선택기(웹 미지원) → `src/features/add/expiry-picker.web.tsx`(브라우저 날짜 입력), 초대 코드 공유가 안 되면 복사
   - [x] 웹 출력 `single`(SPA)로 변경 + `vercel.json`(빌드 `expo export -p web`, 출력 `dist`, 모든 주소 → `/`). 로그인 뒤에서만 쓰는 앱이라 정적 HTML이 필요 없음
-  - [x] 홈 화면 아이콘 `public/apple-touch-icon.png`(지금은 템플릿 기본 아이콘 → 나중에 교체)
+  - [x] 홈 화면 아이콘 `public/apple-touch-icon.png`
+  - [x] 앱 아이콘 확정 (2026-11-06): **물건 선반 · 라벤더**(`#DCD7FF` 바탕, `#4B3FB0` 선반) — 냉장고보다 "집 안 물건 전체"를 챙기는 느낌으로
+    - 원본 `assets/icon/app-icon.svg`, PNG는 `scripts/make-icons.ps1`로 생성 (iOS·Expo 1024, 홈 화면 웹앱 180, 파비콘 48, 스플래시, Android 적응형)
+    - 스플래시·Android 바탕도 라벤더로, 템플릿 아이콘(`assets/expo.icon` 등) 삭제
   - [x] 아이폰에서 앱처럼: `public/index.html`(Expo가 이 파일을 웹 HTML 틀로 씀) — `lang="ko"`, `viewport-fit=cover`(안전 영역), 입력칸 자동 확대·핀치 확대 막기, 홈 화면 앱 메타(주소창 없는 전체 화면), 당겨서 튕기기 막기·바탕색, 화면 높이 `100dvh`
   - [ ] 홈 화면 웹앱 보정 (`src/lib/web-app.tsx`, 루트에서 안전 영역 값 덮어쓰기): 홈 화면 웹앱은 아래 안전 영역이 0으로 와서 탭 바가 홈 바에 붙고, 상태 막대 아래 iOS가 흐리게 덮는 띠에 제목이 걸쳐 잘려 보였음 → 아래 최소 20, 위 +16. Safari 안에서는 그대로 — 폰 확인 필요
   - [x] 로컬 모드(`EXPO_NO_DOTENV=1`, 샘플 데이터)로 브라우저 확인: 홈·빠른 추가 날짜 고르기·설정 확인 창 동작
