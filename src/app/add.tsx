@@ -1,4 +1,3 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -15,17 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/icon';
 import { usePlaceLook } from '@/components/place-look';
-import { Sheet } from '@/components/sheet';
-import {
-  daysBetween,
-  dBadge,
-  expTone,
-  fmt,
-  isColdKind,
-  monthDay,
-  todayIso,
-  type IsoDate,
-} from '@/domain';
+import { daysBetween, dBadge, expTone, fmt, isColdKind, monthDay, type IsoDate } from '@/domain';
 import {
   blankForm,
   fromInbox,
@@ -46,6 +35,7 @@ import {
   withUnit,
   type AddForm,
 } from '@/features/add/add-form';
+import { ExpiryPicker } from '@/features/add/expiry-picker';
 import { useHome } from '@/stores/home-store';
 import { colors, fontSize, fonts, radius, spacing, tones } from '@/theme';
 
@@ -59,11 +49,6 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 function weekday(iso: IsoDate): string {
   const [y, m, d] = iso.split('-').map(Number);
   return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
-}
-
-function toDate(iso: IsoDate): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
 }
 
 export default function AddScreen() {
@@ -80,8 +65,8 @@ export default function AddScreen() {
     return name ? withName(blankForm(places), items, name, places) : blankForm(places);
   });
   const [unitOpen, setUnitOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickDraft, setPickDraft] = useState<Date | null>(null);
+  /** 날짜 고르기를 열면 처음 보여 줄 날짜, 닫혀 있으면 null */
+  const [pickFrom, setPickFrom] = useState<IsoDate | null>(null);
 
   const isFood = form.kind === 'food';
   const exp = isFood ? formExp(form, today) : null;
@@ -372,10 +357,7 @@ export default function AddScreen() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="유통기한 날짜 고르기"
-                  onPress={() => {
-                    setPickDraft(toDate(exp ?? todayIso(toDate(today))));
-                    setPickerOpen(true);
-                  }}
+                  onPress={() => setPickFrom(exp ?? today)}
                   style={styles.dateRow}>
                   <Text style={styles.dateText}>
                     {exp
@@ -424,34 +406,14 @@ export default function AddScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      {pickerOpen && Platform.OS === 'ios' && (
-        <Sheet
-          visible
-          title="유통기한"
-          saveLabel="선택"
-          onClose={() => setPickerOpen(false)}
-          onSave={() => {
-            if (pickDraft) setForm((f) => ({ ...f, exp: 'pick', pick: todayIso(pickDraft) }));
-            setPickerOpen(false);
-          }}>
-          <DateTimePicker
-            value={pickDraft ?? toDate(today)}
-            mode="date"
-            display="inline"
-            locale="ko-KR"
-            onValueChange={(_, d) => setPickDraft(d)}
-          />
-        </Sheet>
-      )}
-      {pickerOpen && Platform.OS !== 'ios' && (
-        <DateTimePicker
-          value={pickDraft ?? toDate(today)}
-          mode="date"
-          onValueChange={(_, d) => {
-            setForm((f) => ({ ...f, exp: 'pick', pick: todayIso(d) }));
-            setPickerOpen(false);
+      {pickFrom && (
+        <ExpiryPicker
+          value={pickFrom}
+          onPick={(iso) => {
+            setForm((f) => ({ ...f, exp: 'pick', pick: iso }));
+            setPickFrom(null);
           }}
-          onDismiss={() => setPickerOpen(false)}
+          onClose={() => setPickFrom(null)}
         />
       )}
     </SafeAreaView>

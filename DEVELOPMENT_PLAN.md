@@ -60,7 +60,7 @@
 - [x] 폰: Expo Go 최신판 설치 (SDK 버전 불일치 시 QR이 안 열림)
 - [x] 가입: GitHub, **Expo(expo.dev) — Expo Go 접속에도 로그인이 필요해서 지금 가입함**
 - [x] 가입: Supabase
-- [ ] 가입: Vercel (Phase 9 전)
+- [x] 가입: Vercel
 - [x] 저장소: https://github.com/HyunjaeHub/home-inventory.git → `C:\Git_Project\home-inventory`에 clone, Cursor로 열기
 - [ ] (선택) 프로젝트 루트에 `.cursor/rules` 또는 `CLAUDE.md`로 코딩 규칙·폴더 구조 기록
 - ✅ 완료 기준: `node -v`, `git --version` 정상, 각 계정 로그인 확인
@@ -79,7 +79,7 @@
 
 - [x] Expo SDK 58 프로젝트 생성 (기본 템플릿, Expo Router, 라우트 루트는 `src/app`)
   - 저장소에 `README.md`가 있어 임시 폴더에 생성 후 옮김 (템플릿의 `.git`, `README.md`, `LICENSE`는 제외)
-  - `app.json`: 이름 "집 재고관리", slug `home-inventory`, scheme `homeinventory`, 웹 출력 `static`(Vercel 정적 배포용)
+  - `app.json`: 이름 "집 재고관리", slug `home-inventory`, scheme `homeinventory`, 웹 출력 `static`(→ 웹 배포 때 `single`로 바꿈, Phase 9 참고)
 - [x] `npx.cmd expo start` → 아이폰 Expo Go로 QR 접속 확인 ("Welcome to Expo" 화면)
 - [x] 템플릿 예제 정리 (예제 화면·컴포넌트·이미지, `scripts/reset-project.js` 삭제)
 - [x] 패키지 설치 (Expo 패키지는 반드시 `npx expo install`)
@@ -241,7 +241,14 @@ Supabase 없이 Zustand + 시드 데이터(시안 `seed()`)로 전 화면 구현
 
 ### Phase 9 — 배포
 
-- [ ] **웹**: `npx expo export --platform web` → `dist`를 Vercel 배포 (환경변수 Vercel에도 등록)
+- [ ] **웹 (앞당겨 진행)**: PC·Expo Go 없이 둘이 바로 써 보려고 Phase 7 전에 웹으로 먼저 배포. 아이폰은 Safari › 공유 › 홈 화면에 추가
+  - [x] 웹에서 안 되던 것 수정: 확인 창(`Alert`는 웹에서 버튼 창이 안 뜸) → `src/lib/confirm.ts`(웹은 `window.confirm`), 유통기한 날짜 선택기(웹 미지원) → `src/features/add/expiry-picker.web.tsx`(브라우저 날짜 입력), 초대 코드 공유가 안 되면 복사
+  - [x] 웹 출력 `single`(SPA)로 변경 + `vercel.json`(빌드 `expo export -p web`, 출력 `dist`, 모든 주소 → `/`). 로그인 뒤에서만 쓰는 앱이라 정적 HTML이 필요 없음
+  - [x] 홈 화면 아이콘 `public/apple-touch-icon.png`(지금은 템플릿 기본 아이콘 → 나중에 교체)
+  - [x] 로컬 모드(`EXPO_NO_DOTENV=1`, 샘플 데이터)로 브라우저 확인: 홈·빠른 추가 날짜 고르기·설정 확인 창 동작
+  - [ ] Vercel: GitHub 저장소 연결, 환경변수 `EXPO_PUBLIC_SUPABASE_URL`·`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 등록 → `main` 푸시마다 자동 배포
+  - [ ] 두 폰에서 웹 주소로 로그인·실시간 반영 확인
+  - 한계: 알림(웹 푸시)은 iOS에서 홈 화면 앱에만 되고 번거로움 → 알림은 네이티브 빌드에서
 - [ ] **iOS**: `npm i -g eas-cli` → `eas login` → `eas build:configure` → `eas build --platform ios`
 - [ ] Apple Developer Program 가입($99/년) → TestFlight로 부부 폰 설치 → (선택) App Store 제출
 - [ ] 개인용이면 TestFlight만으로도 충분 (App Store 심사 생략 가능)

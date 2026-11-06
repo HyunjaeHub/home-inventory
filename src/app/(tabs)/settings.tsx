@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Share, StyleSheet, Text } from 'react-native';
+import { Share, StyleSheet, Text } from 'react-native';
 
 import { Screen } from '@/components/screen';
 import { OptionSheet } from '@/features/settings/option-sheet';
 import { SettingGroup, SettingRow, SettingSwitch, TILES } from '@/features/settings/setting-row';
+import { confirmAction } from '@/lib/confirm';
 import { useAuth } from '@/stores/auth-store';
 import { useHome } from '@/stores/home-store';
 import { showToast } from '@/stores/toast-store';
@@ -41,32 +42,45 @@ export default function SettingsScreen() {
   const myId = useAuth((s) => s.session?.user.id);
   const email = useAuth((s) => s.session?.user.email);
 
-  const shareInvite = () => {
+  const shareInvite = async () => {
     if (!household) return;
-    Share.share({
-      message: `집 재고관리에 같이 들어와요. 가입한 뒤 "초대 코드를 받았어요"에서 이 코드를 넣어 주세요: ${household.inviteCode}`,
-    });
+    const message = `집 재고관리에 같이 들어와요. 가입한 뒤 "초대 코드를 받았어요"에서 이 코드를 넣어 주세요: ${household.inviteCode}`;
+    try {
+      await Share.share({ message });
+    } catch {
+      // 웹 브라우저에 공유 기능이 없으면 복사해 둔다
+      await navigator.clipboard?.writeText(message).catch(() => {});
+      showToast(`초대 코드 ${household.inviteCode}를 복사했어요`);
+    }
   };
 
   const confirmSample = () =>
     household
-      ? Alert.alert('샘플 데이터 채우기', '지금 재고·살 것·정리할 것·할 일이 샘플로 바뀌어요.', [
-          { text: '취소', style: 'cancel' },
-          { text: '채우기', onPress: actions.resetSample },
-        ])
+      ? confirmAction({
+          title: '샘플 데이터 채우기',
+          message: '지금 재고·살 것·정리할 것·할 일이 샘플로 바뀌어요.',
+          confirmLabel: '채우기',
+          onConfirm: actions.resetSample,
+        })
       : actions.resetSample();
 
   const confirmSignOut = () =>
-    Alert.alert('로그아웃', '이 폰에서 로그아웃할까요?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: () => useAuth.getState().signOut() },
-    ]);
+    confirmAction({
+      title: '로그아웃',
+      message: '이 기기에서 로그아웃할까요?',
+      confirmLabel: '로그아웃',
+      destructive: true,
+      onConfirm: () => useAuth.getState().signOut(),
+    });
 
   const confirmClear = () =>
-    Alert.alert('모든 재고 지우기', '재고, 살 것, 정리할 것, 다음 한끼가 모두 지워져요.', [
-      { text: '취소', style: 'cancel' },
-      { text: '지우기', style: 'destructive', onPress: actions.clearAll },
-    ]);
+    confirmAction({
+      title: '모든 재고 지우기',
+      message: '재고, 살 것, 정리할 것, 다음 한끼가 모두 지워져요.',
+      confirmLabel: '지우기',
+      destructive: true,
+      onConfirm: actions.clearAll,
+    });
 
   return (
     <Screen title="설정">

@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Icon } from '@/components/icon';
 import { lookOfKind } from '@/components/place-look';
 import { Sheet } from '@/components/sheet';
 import { PLACE_KINDS, type PlaceKind, type StoragePlace } from '@/domain';
+import { confirmAction } from '@/lib/confirm';
 import { useHome } from '@/stores/home-store';
 import { colors, fontSize, radius, spacing } from '@/theme';
 
@@ -27,16 +28,15 @@ export function PlaceSheet({ place, onClose }: Props) {
 
   const remove = () => {
     if (!place) return;
-    Alert.alert(`${place.name} 지우기`, '이 장소를 목록에서 지워요.', [
-      { text: '취소', style: 'cancel' },
-      {
-        text: '지우기',
-        style: 'destructive',
-        onPress: () => {
-          if (actions.removePlace(place.id)) onClose();
-        },
+    confirmAction({
+      title: `${place.name} 지우기`,
+      message: '이 장소를 목록에서 지워요.',
+      confirmLabel: '지우기',
+      destructive: true,
+      onConfirm: () => {
+        if (actions.removePlace(place.id)) onClose();
       },
-    ]);
+    });
   };
 
   return (

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-local",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "set EXPO_NO_DOTENV=1&& set CI=1&& npx expo start --web --port 8082"],
+      "port": 8082
+    }
+  ]
+}

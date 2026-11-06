@@ -20,8 +20,12 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "name": "집 재고관리",
+      "shortName": "재고관리",
+      "backgroundColor": "#F1F1F5",
+      "themeColor": "#F1F1F5"
     },
     "plugins": [
       "expo-router",
